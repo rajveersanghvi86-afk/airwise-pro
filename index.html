@@ -2,589 +2,550 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>AirWise Pro - Live AQI Monitor, Health Advisor & Forecast</title>
-  <meta name="description" content="Real-time Air Quality Index monitoring, outdoor activity advice, mask recommendations, hourly planning, and 7-day pollution predictions.">
-  
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Leaflet CSS for Interactive Map -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <meta name="description" content="Live air quality for your city, the best time to go outside, mask and activity advice, a 7-day forecast and alerts. Works offline.">
 
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0b0f19">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="AirWise">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-  <!-- Set the theme before the page paints, so there's no flash -->
+  <!-- Set theme, language and layout before the page paints, so nothing flashes -->
   <script>
     (function () {
-      var pref = "system";
-      try { pref = localStorage.getItem("airwise_theme") || "system"; } catch (e) {}
+      var d = document.documentElement, pref = "system", lang = null;
+      try { pref = localStorage.getItem("airwise_theme") || "system"; lang = localStorage.getItem("airwise_lang"); } catch (e) {}
       var dark = pref === "dark" || (pref === "system" && !(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches));
-      document.documentElement.dataset.theme = dark ? "dark" : "light";
+      d.setAttribute("data-theme", dark ? "dark" : "light");
+      if (lang) d.setAttribute("lang", lang);
     })();
   </script>
 
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://air-quality-api.open-meteo.com" crossorigin>
+  <link rel="preconnect" href="https://api.open-meteo.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Icons load without blocking the first paint -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+
+  <link rel="stylesheet" href="app.min.css">
 </head>
-<body>
+<body data-layout="desktop" data-tab="now">
+
+<a class="skip-link" href="#main" data-i18n="skip">Skip to main content</a>
 
 <div class="app-container">
 
-  <!-- Header & Navigation -->
-  <header>
+  <header class="app-header">
     <div class="brand">
-      <div class="brand-icon">🌱</div>
-      <div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <h1 class="brand-title">AirWise</h1>
-          <span class="brand-badge">PRO</span>
-        </div>
+      <img class="brand-icon" src="icon.svg" alt="" width="40" height="40">
+      <div class="brand-text">
+        <h1 class="brand-title">AirWise</h1>
+        <span class="brand-badge">PRO</span>
       </div>
     </div>
 
     <div class="header-actions">
-      <!-- Search Bar -->
-      <div class="search-box">
+      <form class="search-box" id="searchForm" role="search" autocomplete="off">
+        <label class="sr-only" for="searchInput" data-i18n="search.label">Search for a city</label>
         <div class="search-input-wrapper">
-          <i class="fa-solid fa-magnifying-glass search-icon"></i>
-          <input type="text" id="searchInput" aria-label="Search city or location" class="search-input" placeholder="Search city or location..." autocomplete="off">
+          <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+          <input type="search" id="searchInput" class="search-input" placeholder="Search city or place..." data-i18n-placeholder="search.placeholder"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="searchResults" enterkeyhint="search" spellcheck="false">
         </div>
-        <div id="searchResults" class="search-results"></div>
+        <div id="searchResults" class="search-results" role="listbox" data-i18n-label="search.label" hidden></div>
+      </form>
+
+      <div class="header-buttons">
+        <button id="geoBtn" class="btn-icon-text btn-primary" type="button" data-i18n-title="btn.myLocation">
+          <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+          <span class="btn-label" data-i18n="btn.myLocation">My location</span>
+        </button>
+        <button id="alertsBtn" class="btn-icon-text icon-btn" type="button" data-i18n-label="btn.alerts" data-i18n-title="btn.alerts">
+          <i class="fa-regular fa-bell" aria-hidden="true"></i>
+        </button>
+        <button id="themeBtn" class="btn-icon-text icon-btn" type="button" data-i18n-label="btn.theme" data-i18n-title="btn.theme">
+          <i class="fa-solid fa-sun" aria-hidden="true"></i>
+        </button>
+        <button id="helpBtn" class="btn-icon-text icon-btn" type="button" data-i18n-label="btn.help" data-i18n-title="btn.help">
+          <i class="fa-regular fa-circle-question" aria-hidden="true"></i>
+        </button>
+        <button id="installBtn" class="btn-icon-text btn-install" type="button" data-i18n-title="btn.installLong" hidden>
+          <i class="fa-solid fa-download" aria-hidden="true"></i>
+          <span class="btn-label" data-i18n="btn.install">Install</span>
+        </button>
+        <button id="settingsBtn" class="btn-icon-text icon-btn desktop-only" type="button" data-i18n-label="btn.settings" data-i18n-title="btn.settings">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        </button>
       </div>
-
-      <!-- Geolocation Button -->
-      <button id="geoBtn" class="btn-icon-text btn-primary" title="Detect Current Geolocation" aria-label="Use my location">
-        <i class="fa-solid fa-location-crosshairs"></i>
-        <span>My Location</span>
-      </button>
-
-      <!-- Alerts Button -->
-      <button id="alertsBtn" class="btn-icon-text" title="Air quality alerts" aria-label="Air quality alerts">
-        <i class="fa-regular fa-bell"></i>
-      </button>
-
-      <!-- Theme Toggle -->
-      <button id="themeBtn" class="btn-icon-text" title="Switch theme" aria-label="Switch theme">
-        <i class="fa-solid fa-sun"></i>
-      </button>
-
-      <!-- Tour / Help -->
-      <button id="helpBtn" class="btn-icon-text" title="Take the tour" aria-label="Take the tour">
-        <i class="fa-regular fa-circle-question"></i>
-      </button>
-
-      <!-- Install App (shown when the browser allows it) -->
-      <button id="installBtn" class="btn-icon-text btn-install" title="Install AirWise as an app" aria-label="Install app" hidden>
-        <i class="fa-solid fa-download"></i>
-        <span>Install</span>
-      </button>
-
-      <!-- Settings Button -->
-      <button id="settingsBtn" class="btn-icon-text" title="Settings" aria-label="Settings">
-        <i class="fa-solid fa-sliders"></i>
-      </button>
     </div>
   </header>
 
-  <!-- Health Sensitivity Profile Selector Bar -->
-  <div class="profile-bar">
-    <div class="profile-info">
-      <i class="fa-solid fa-user-shield" style="color: var(--accent-primary);"></i>
-      <span>Health Sensitivity Profile:</span>
-    </div>
-    <div class="profile-options">
-      <div class="profile-chip active" data-profile="general">
-        <i class="fa-solid fa-user"></i> General Public
+  <main id="main" tabindex="-1">
+
+    <section class="profile-bar" data-tab="now plan" aria-labelledby="profileLabel">
+      <div class="profile-info">
+        <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+        <span id="profileLabel" data-i18n="profile.label">Advice for:</span>
       </div>
-      <div class="profile-chip" data-profile="sensitive">
-        <i class="fa-solid fa-child-reaching"></i> Children & Seniors
+      <div class="profile-options">
+        <div class="profile-chip active" data-profile="general"><i class="fa-solid fa-user" aria-hidden="true"></i> <span data-i18n="profile.general">General public</span></div>
+        <div class="profile-chip" data-profile="sensitive"><i class="fa-solid fa-child-reaching" aria-hidden="true"></i> <span data-i18n="profile.sensitive">Children &amp; seniors</span></div>
+        <div class="profile-chip" data-profile="respiratory"><i class="fa-solid fa-lungs" aria-hidden="true"></i> <span data-i18n="profile.respiratory">Asthma &amp; breathing</span></div>
+        <div class="profile-chip" data-profile="athlete"><i class="fa-solid fa-person-running" aria-hidden="true"></i> <span data-i18n="profile.athlete">Outdoor athletes</span></div>
+        <div class="profile-chip profile-chip-personal" data-profile="personal" hidden><i class="fa-solid fa-user-gear" aria-hidden="true"></i> <span data-i18n="profile.personal">My profile</span></div>
       </div>
-      <div class="profile-chip" data-profile="respiratory">
-        <i class="fa-solid fa-lungs"></i> Asthma & Respiratory
+    </section>
+
+    <section class="favorites-bar" data-tab="now" aria-labelledby="favLabel">
+      <div class="profile-info">
+        <i class="fa-solid fa-star" aria-hidden="true" style="color: #f59e0b;"></i>
+        <span id="favLabel" data-i18n="fav.label">Saved places:</span>
       </div>
-      <div class="profile-chip" data-profile="athlete">
-        <i class="fa-solid fa-person-running"></i> Outdoor Athletes
-      </div>
-      <div class="profile-chip profile-chip-personal" data-profile="personal" hidden>
-        <i class="fa-solid fa-user-gear"></i> My Profile
-      </div>
-    </div>
-  </div>
+      <ul id="favoritesList" class="favorites-list"></ul>
+    </section>
 
-  <!-- Favorite Locations Bar -->
-  <div class="favorites-bar">
-    <div class="profile-info">
-      <i class="fa-solid fa-star" style="color: #fbbf24;"></i>
-      <span>Favorites:</span>
-    </div>
-    <div id="favoritesList" class="favorites-list"></div>
-  </div>
+    <div class="dashboard-grid">
 
-  <!-- Main Dashboard Grid -->
-  <div class="dashboard-grid">
-
-    <!-- HERO CARD: AQI Speedometer Gauge -->
-    <div class="card aqi-hero-card grid-col-2">
-      <div class="location-meta">
-        <i class="fa-solid fa-location-dot" style="color: #ef4444;"></i>
-        <span id="locName" class="location-name">Detecting Location...</span>
-        <button id="favBtn" class="fav-toggle" title="Save to favorites" aria-label="Save to favorites" aria-pressed="false"><i class="fa-regular fa-star"></i></button>
-        <button id="shareBtn" class="fav-toggle share-toggle" title="Share this city's air quality" aria-label="Share"><i class="fa-solid fa-share-nodes"></i></button>
-        <span id="offlinePill" class="offline-pill" hidden><i class="fa-solid fa-wifi"></i> Offline</span>
-        <span id="stationName" class="station-name-tag"></span>
-        <span id="updatedTime" style="color: var(--text-dim); font-weight: 400; font-size: 13px;"></span>
-      </div>
-
-      <!-- Animated SVG Speedometer Gauge -->
-      <div class="gauge-wrapper">
-        <svg class="gauge-svg" viewBox="0 0 260 150">
-          <!-- Background Arc (180 deg) -->
-          <path class="gauge-bg-path" d="M 20,130 A 110,110 0 0,1 240,130"></path>
-          
-          <!-- Colored Arc (Dynamic Offset) -->
-          <path id="gaugeArc" class="gauge-arc-path" d="M 20,130 A 110,110 0 0,1 240,130" stroke-dasharray="345.5" stroke-dashoffset="345.5"></path>
-          
-          <!-- Needle -->
-          <g id="gaugeNeedle" class="gauge-needle" transform="rotate(-90 130 130)">
-            <polygon points="130,25 125,130 135,130" fill="#ffffff" />
-            <circle cx="130" cy="130" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
-          </g>
-        </svg>
-
-        <div class="gauge-center-text">
-          <span id="aqiNum" class="aqi-number">--</span>
-          <span class="aqi-label">US AQI</span>
-        </div>
-      </div>
-
-      <!-- AQI Category Status Pill -->
-      <div id="aqiPill" class="aqi-status-pill aqi-status-good">
-        <i class="fa-solid fa-circle-check"></i>
-        <span id="aqiCategory">Good</span>
-      </div>
-      <div id="dominantTag" class="dominant-tag"></div>
-
-      <p id="heroSummary" class="hero-summary-text">Fetching real-time atmospheric data for your region...</p>
-
-      <!-- Weather & Environmental Metrics -->
-      <div class="weather-metrics-grid">
-        <div class="metric-pill">
-          <div class="metric-icon"><i class="fa-solid fa-temperature-half"></i></div>
-          <div id="tempVal" class="metric-val">--°C</div>
-          <div class="metric-name">Temp</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-icon"><i class="fa-solid fa-droplet"></i></div>
-          <div id="humidityVal" class="metric-val">--%</div>
-          <div class="metric-name">Humidity</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-icon"><i class="fa-solid fa-wind"></i></div>
-          <div id="windVal" class="metric-val">-- km/h</div>
-          <div class="metric-name">Wind</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-icon"><i class="fa-solid fa-sun"></i></div>
-          <div id="uvVal" class="metric-val">--</div>
-          <div class="metric-name">UV Index</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- POLLUTANTS BREAKDOWN -->
-    <div class="card grid-col-2">
-      <div class="card-header">
-        <div>
-          <h3 class="card-title"><i class="fa-solid fa-vial"></i> Pollutant Breakdown</h3>
-          <span class="card-subtitle">Real-Time EPA Sub-AQI & Concentrations</span>
-        </div>
-      </div>
-
-      <div class="pollutants-grid">
-        <div class="pollutant-card" id="cardPM25">
-          <div class="pollutant-name">
-            <span>PM2.5</span>
-            <span id="badgePM25" class="subaqi-badge">Sub-AQI --</span>
-          </div>
-          <div class="pollutant-value"><span id="valPM25">--</span> <span class="pollutant-unit">µg/m³</span></div>
-          <div id="catPM25" class="pollutant-category">--</div>
-          <div class="pollutant-bar-bg"><div id="barPM25" class="pollutant-bar-fill"></div></div>
+      <!-- Current air quality -->
+      <section class="card aqi-hero-card grid-col-2" data-tab="now" aria-labelledby="locName" aria-busy="true">
+        <div class="location-meta">
+          <i class="fa-solid fa-location-dot" aria-hidden="true" style="color: #ef4444;"></i>
+          <h2 id="locName" class="location-name" data-i18n="loc.detecting">Finding your location...</h2>
+          <button id="favBtn" class="fav-toggle" type="button" data-i18n-label="fav.save" data-i18n-title="fav.save" aria-pressed="false"><i class="fa-regular fa-star" aria-hidden="true"></i></button>
+          <button id="shareBtn" class="fav-toggle share-toggle" type="button" data-i18n-label="share" data-i18n-title="share"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i></button>
+          <span id="offlinePill" class="offline-pill" hidden><i class="fa-solid fa-wifi" aria-hidden="true"></i> <span data-i18n="offline">Offline</span></span>
+          <span id="stationName" class="station-name-tag"></span>
+          <span id="updatedTime" class="updated-time"></span>
         </div>
 
-        <div class="pollutant-card" id="cardPM10">
-          <div class="pollutant-name">
-            <span>PM10</span>
-            <span id="badgePM10" class="subaqi-badge">Sub-AQI --</span>
-          </div>
-          <div class="pollutant-value"><span id="valPM10">--</span> <span class="pollutant-unit">µg/m³</span></div>
-          <div id="catPM10" class="pollutant-category">--</div>
-          <div class="pollutant-bar-bg"><div id="barPM10" class="pollutant-bar-fill"></div></div>
-        </div>
-
-        <div class="pollutant-card" id="cardNO2">
-          <div class="pollutant-name">
-            <span>NO₂</span>
-            <span id="badgeNO2" class="subaqi-badge">Sub-AQI --</span>
-          </div>
-          <div class="pollutant-value"><span id="valNO2">--</span> <span class="pollutant-unit">µg/m³</span></div>
-          <div id="catNO2" class="pollutant-category">--</div>
-          <div class="pollutant-bar-bg"><div id="barNO2" class="pollutant-bar-fill"></div></div>
-        </div>
-
-        <div class="pollutant-card" id="cardO3">
-          <div class="pollutant-name">
-            <span>O₃</span>
-            <span id="badgeO3" class="subaqi-badge">Sub-AQI --</span>
-          </div>
-          <div class="pollutant-value"><span id="valO3">--</span> <span class="pollutant-unit">µg/m³</span></div>
-          <div id="catO3" class="pollutant-category">--</div>
-          <div class="pollutant-bar-bg"><div id="barO3" class="pollutant-bar-fill"></div></div>
-        </div>
-
-        <div class="pollutant-card" id="cardSO2">
-          <div class="pollutant-name">
-            <span>SO₂</span>
-            <span id="badgeSO2" class="subaqi-badge">Sub-AQI --</span>
-          </div>
-          <div class="pollutant-value"><span id="valSO2">--</span> <span class="pollutant-unit">µg/m³</span></div>
-          <div id="catSO2" class="pollutant-category">--</div>
-          <div class="pollutant-bar-bg"><div id="barSO2" class="pollutant-bar-fill"></div></div>
-        </div>
-
-        <div class="pollutant-card" id="cardCO">
-          <div class="pollutant-name">
-            <span>CO</span>
-            <span id="badgeCO" class="subaqi-badge">Sub-AQI --</span>
-          </div>
-          <div class="pollutant-value"><span id="valCO">--</span> <span class="pollutant-unit">µg/m³</span></div>
-          <div id="catCO" class="pollutant-category">--</div>
-          <div class="pollutant-bar-bg"><div id="barCO" class="pollutant-bar-fill"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- PERSONAL HEALTH PLAN -->
-    <div class="card grid-col-4 personal-plan-card" id="personalPlanCard">
-      <div class="card-header">
-        <div>
-          <h3 class="card-title"><i class="fa-solid fa-user-shield"></i> Your Personal Plan</h3>
-          <span class="card-subtitle">Advice tuned to your health, age and activity</span>
-        </div>
-        <div id="personalPlanActions" class="plan-actions"></div>
-      </div>
-      <div id="personalPlanBody"></div>
-    </div>
-
-    <!-- OUTDOOR TIME PLANNER (WHEN TO GO OUT) -->
-    <div class="card grid-col-4 outdoor-planner-hero">
-      <div class="card-header">
-        <div>
-          <h3 class="card-title"><i class="fa-solid fa-clock"></i> Best Outdoor Time Planner</h3>
-          <span class="card-subtitle">Cleanest hours in the next 24 hours, in local time</span>
-        </div>
-      </div>
-
-      <div class="planner-best-window">
-        <div class="window-badge-icon" id="plannerIcon"><i class="fa-solid fa-face-smile"></i></div>
-        <div class="window-info">
-          <h4 id="plannerHeadline">Calculating optimal outdoor windows...</h4>
-          <p id="plannerDetail">Analyzing 24-hour PM2.5 and wind dispersion patterns.</p>
-        </div>
-      </div>
-
-      <!-- 24-Hour Timeline Strip -->
-      <div class="timeline-scroll-wrapper">
-        <div id="hourlyTimeline" class="timeline-strip">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-    </div>
-
-    <!-- MASK GUIDANCE & RESPIRATOR SELECTOR -->
-    <div class="card grid-col-2">
-      <div class="card-header">
-        <div>
-          <h3 class="card-title"><i class="fa-solid fa-mask-face"></i> Mask & Respirator Guidance</h3>
-          <span class="card-subtitle">Medical & health protection standards</span>
-        </div>
-      </div>
-
-      <div class="mask-hero-wrapper">
-        <div class="mask-status-card">
-          <div class="mask-recommend-icon" id="maskIcon"><i class="fa-solid fa-head-side-mask"></i></div>
-          <h4 class="mask-decision-title" id="maskDecisionTitle">Evaluating...</h4>
-          <p class="mask-decision-desc" id="maskDecisionDesc">Assessing air particulate matter.</p>
-        </div>
-
-        <div class="mask-options-grid">
-          <!-- Cloth Mask -->
-          <div id="maskCloth" class="mask-type-card">
-            <div class="mask-icon-box">🧵</div>
-            <div class="mask-details">
-              <h5>Cloth Mask</h5>
-              <p>Filters dust & large droplets</p>
-              <span class="mask-tag tag-not-needed" id="tagCloth">Optional</span>
-            </div>
-          </div>
-
-          <!-- Surgical Mask -->
-          <div id="maskSurgical" class="mask-type-card">
-            <div class="mask-icon-box">😷</div>
-            <div class="mask-details">
-              <h5>3-Ply Surgical</h5>
-              <p>Filters ~60% PM2.5</p>
-              <span class="mask-tag tag-optional" id="tagSurgical">Optional</span>
-            </div>
-          </div>
-
-          <!-- N95 / KN95 Respirator -->
-          <div id="maskN95" class="mask-type-card">
-            <div class="mask-icon-box">🛡️</div>
-            <div class="mask-details">
-              <h5>N95 / KN95</h5>
-              <p>Filters ≥95% airborne particles</p>
-              <span class="mask-tag tag-recommended" id="tagN95">Recommended</span>
-            </div>
-          </div>
-
-          <!-- P100 / Heavy Duty -->
-          <div id="maskP100" class="mask-type-card">
-            <div class="mask-icon-box">🥽</div>
-            <div class="mask-details">
-              <h5>P100 Respirator</h5>
-              <p>Filters 99.97% hazardous dust</p>
-              <span class="mask-tag tag-optional" id="tagP100">Severe Only</span>
-            </div>
+        <div class="gauge-wrapper" id="gaugeWrapper" role="img" aria-label="AQI">
+          <svg class="gauge-svg" viewBox="0 0 260 150" aria-hidden="true" focusable="false">
+            <path class="gauge-bg-path" d="M 20,130 A 110,110 0 0,1 240,130"></path>
+            <path id="gaugeArc" class="gauge-arc-path" d="M 20,130 A 110,110 0 0,1 240,130" stroke-dasharray="345.5" stroke-dashoffset="345.5"></path>
+            <g id="gaugeNeedle" class="gauge-needle" transform="rotate(-90 130 130)">
+              <polygon points="130,25 125,130 135,130" />
+              <circle cx="130" cy="130" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
+            </g>
+          </svg>
+          <div class="gauge-center-text" aria-hidden="true">
+            <span id="aqiNum" class="aqi-number">--</span>
+            <span class="aqi-label" data-i18n="aqi.label">AQI</span>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- OUTDOOR ACTIVITY SAFETY GRID -->
-    <div class="card grid-col-2">
-      <div class="card-header">
-        <div>
-          <h3 class="card-title"><i class="fa-solid fa-person-biking"></i> Activity Safety Matrix</h3>
-          <span class="card-subtitle">Real-time health recommendations for outdoor tasks</span>
+        <div id="aqiPill" class="aqi-status-pill aqi-status-good">
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+          <span id="aqiCategory">--</span>
         </div>
-      </div>
+        <div id="dominantTag" class="dominant-tag"></div>
 
-      <div id="activityGrid" class="activities-grid">
-        <!-- Populated by JS -->
-      </div>
-    </div>
+        <p id="heroSummary" class="hero-summary-text" data-i18n="hero.loading">Getting live air quality for your area...</p>
 
-    <!-- FORECAST & TREND CHARTS -->
-    <div class="card grid-col-4">
-      <div class="card-header">
-        <div>
-          <h3 class="card-title"><i class="fa-solid fa-chart-line"></i> Air Quality Predictions & 7-Day Trend</h3>
-          <span class="card-subtitle">Hourly & daily US AQI forecast</span>
+        <details class="aqi-info">
+          <summary><i class="fa-solid fa-circle-info" aria-hidden="true"></i> <span data-i18n="aqi.what">What is AQI?</span></summary>
+          <p data-i18n="aqi.explain">AQI (Air Quality Index) is a score from 0 to 500 for how polluted the air is. Lower is better.</p>
+        </details>
+
+        <ul class="weather-metrics-grid">
+          <li class="metric-pill">
+            <div class="metric-icon" aria-hidden="true"><i class="fa-solid fa-temperature-half"></i></div>
+            <div id="tempVal" class="metric-val">--°C</div>
+            <div class="metric-name" data-i18n="weather.temp">Temp</div>
+          </li>
+          <li class="metric-pill">
+            <div class="metric-icon" aria-hidden="true"><i class="fa-solid fa-droplet"></i></div>
+            <div id="humidityVal" class="metric-val">--%</div>
+            <div class="metric-name" data-i18n="weather.humidity">Humidity</div>
+          </li>
+          <li class="metric-pill">
+            <div class="metric-icon" aria-hidden="true"><i class="fa-solid fa-wind"></i></div>
+            <div id="windVal" class="metric-val">-- km/h</div>
+            <div class="metric-name" data-i18n="weather.wind">Wind</div>
+          </li>
+          <li class="metric-pill">
+            <div class="metric-icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></div>
+            <div id="uvVal" class="metric-val">--</div>
+            <div class="metric-name" data-i18n="weather.uv">UV index</div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Pollutants -->
+      <section class="card grid-col-2" data-tab="now" aria-labelledby="pollutantsTitle">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="pollutantsTitle" tabindex="-1"><i class="fa-solid fa-vial" aria-hidden="true"></i> <span data-i18n="card.pollutants">Pollutant breakdown</span></h2>
+            <p class="card-subtitle" data-i18n="card.pollutantsSub">What's in the air right now</p>
+          </div>
         </div>
-        <div class="chart-tabs">
-          <button class="chart-tab-btn active" data-chart="hourly">24-Hour Hourly</button>
-          <button class="chart-tab-btn" data-chart="daily">7-Day Forecast</button>
+        <div class="pollutants-grid">
+          <div class="pollutant-card" id="cardPM25" role="group">
+            <div class="pollutant-name"><span>PM2.5</span><span id="badgePM25" class="subaqi-badge">AQI --</span></div>
+            <div class="pollutant-value"><span id="valPM25">--</span> <span class="pollutant-unit">µg/m³</span></div>
+            <div id="catPM25" class="pollutant-category">--</div>
+            <div class="pollutant-bar-bg" aria-hidden="true"><div id="barPM25" class="pollutant-bar-fill"></div></div>
+          </div>
+          <div class="pollutant-card" id="cardPM10" role="group">
+            <div class="pollutant-name"><span>PM10</span><span id="badgePM10" class="subaqi-badge">AQI --</span></div>
+            <div class="pollutant-value"><span id="valPM10">--</span> <span class="pollutant-unit">µg/m³</span></div>
+            <div id="catPM10" class="pollutant-category">--</div>
+            <div class="pollutant-bar-bg" aria-hidden="true"><div id="barPM10" class="pollutant-bar-fill"></div></div>
+          </div>
+          <div class="pollutant-card" id="cardNO2" role="group">
+            <div class="pollutant-name"><span>NO₂</span><span id="badgeNO2" class="subaqi-badge">AQI --</span></div>
+            <div class="pollutant-value"><span id="valNO2">--</span> <span class="pollutant-unit">µg/m³</span></div>
+            <div id="catNO2" class="pollutant-category">--</div>
+            <div class="pollutant-bar-bg" aria-hidden="true"><div id="barNO2" class="pollutant-bar-fill"></div></div>
+          </div>
+          <div class="pollutant-card" id="cardO3" role="group">
+            <div class="pollutant-name"><span>O₃</span><span id="badgeO3" class="subaqi-badge">AQI --</span></div>
+            <div class="pollutant-value"><span id="valO3">--</span> <span class="pollutant-unit">µg/m³</span></div>
+            <div id="catO3" class="pollutant-category">--</div>
+            <div class="pollutant-bar-bg" aria-hidden="true"><div id="barO3" class="pollutant-bar-fill"></div></div>
+          </div>
+          <div class="pollutant-card" id="cardSO2" role="group">
+            <div class="pollutant-name"><span>SO₂</span><span id="badgeSO2" class="subaqi-badge">AQI --</span></div>
+            <div class="pollutant-value"><span id="valSO2">--</span> <span class="pollutant-unit">µg/m³</span></div>
+            <div id="catSO2" class="pollutant-category">--</div>
+            <div class="pollutant-bar-bg" aria-hidden="true"><div id="barSO2" class="pollutant-bar-fill"></div></div>
+          </div>
+          <div class="pollutant-card" id="cardCO" role="group">
+            <div class="pollutant-name"><span>CO</span><span id="badgeCO" class="subaqi-badge">AQI --</span></div>
+            <div class="pollutant-value"><span id="valCO">--</span> <span class="pollutant-unit">µg/m³</span></div>
+            <div id="catCO" class="pollutant-category">--</div>
+            <div class="pollutant-bar-bg" aria-hidden="true"><div id="barCO" class="pollutant-bar-fill"></div></div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="chart-container">
-        <canvas id="mainChart"></canvas>
-      </div>
-    </div>
-
-    <!-- INTERACTIVE AIR QUALITY MAP -->
-    <div class="card grid-col-4 map-card" id="mapCard">
-      <div class="card-header">
-        <div>
-          <h3 class="card-title"><i class="fa-solid fa-map-location-dot"></i> Interactive Air Quality Map</h3>
-          <span class="card-subtitle">Tap anywhere to check the air · colored dots show AQI across the area</span>
+      <!-- Personal plan -->
+      <section class="card grid-col-4 personal-plan-card" id="personalPlanCard" data-tab="now" aria-labelledby="planTitle">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="planTitle"><i class="fa-solid fa-user-shield" aria-hidden="true"></i> <span data-i18n="card.plan">Your personal plan</span></h2>
+            <p class="card-subtitle" data-i18n="card.planSub">Advice tuned to your health, age and activity</p>
+          </div>
+          <div id="personalPlanActions" class="plan-actions"></div>
         </div>
-      </div>
+        <div id="personalPlanBody"></div>
+      </section>
 
-      <div id="map" class="map-container" aria-label="Air quality map"></div>
-      <div id="mapStatus" class="map-status">Loading map...</div>
+      <!-- Best time to go out -->
+      <section class="card grid-col-4 outdoor-planner-hero" data-tab="plan" aria-labelledby="plannerTitle">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="plannerTitle" tabindex="-1"><i class="fa-solid fa-clock" aria-hidden="true"></i> <span data-i18n="card.planner">Best time to go out</span></h2>
+            <p class="card-subtitle" data-i18n="card.plannerSub">Cleanest hours in the next 24 hours, in local time</p>
+          </div>
+        </div>
+        <div class="planner-best-window">
+          <div class="window-badge-icon" id="plannerIcon" aria-hidden="true"><i class="fa-solid fa-face-smile"></i></div>
+          <div class="window-info" aria-live="polite">
+            <h3 id="plannerHeadline" data-i18n="planner.loading">Finding the cleanest hours...</h3>
+            <p id="plannerDetail" data-i18n="planner.loadingDetail">Checking the 24-hour forecast.</p>
+          </div>
+        </div>
+        <div class="timeline-scroll-wrapper" tabindex="0" data-i18n-label="card.plannerSub">
+          <ul id="hourlyTimeline" class="timeline-strip"></ul>
+        </div>
+      </section>
+
+      <!-- Masks -->
+      <section class="card grid-col-2" data-tab="plan" aria-labelledby="maskTitle">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="maskTitle"><i class="fa-solid fa-mask-face" aria-hidden="true"></i> <span data-i18n="card.mask">Mask guidance</span></h2>
+            <p class="card-subtitle" data-i18n="card.maskSub">Which mask, if any, you need today</p>
+          </div>
+        </div>
+        <div class="mask-hero-wrapper">
+          <div class="mask-status-card" aria-live="polite">
+            <div class="mask-recommend-icon" id="maskIcon" aria-hidden="true"><i class="fa-solid fa-head-side-mask"></i></div>
+            <h3 class="mask-decision-title" id="maskDecisionTitle" data-i18n="mask.evaluating">Checking...</h3>
+            <p class="mask-decision-desc" id="maskDecisionDesc" data-i18n="mask.evaluatingDesc">Looking at the particles in the air.</p>
+          </div>
+          <ul class="mask-options-grid">
+            <li id="maskCloth" class="mask-type-card">
+              <div class="mask-icon-box" aria-hidden="true">🧵</div>
+              <div class="mask-details">
+                <h4 data-i18n="mask.cloth">Cloth mask</h4>
+                <p data-i18n="mask.clothDesc">Stops dust and large droplets</p>
+                <span class="mask-tag tag-not-needed" id="tagCloth">--</span>
+              </div>
+            </li>
+            <li id="maskSurgical" class="mask-type-card">
+              <div class="mask-icon-box" aria-hidden="true">😷</div>
+              <div class="mask-details">
+                <h4 data-i18n="mask.surgical">Surgical mask</h4>
+                <p data-i18n="mask.surgicalDesc">Filters about 60% of PM2.5</p>
+                <span class="mask-tag tag-optional" id="tagSurgical">--</span>
+              </div>
+            </li>
+            <li id="maskN95" class="mask-type-card">
+              <div class="mask-icon-box" aria-hidden="true">🛡️</div>
+              <div class="mask-details">
+                <h4 data-i18n="mask.n95">N95 / KN95</h4>
+                <p data-i18n="mask.n95Desc">Filters 95% or more of fine particles</p>
+                <span class="mask-tag tag-recommended" id="tagN95">--</span>
+              </div>
+            </li>
+            <li id="maskP100" class="mask-type-card">
+              <div class="mask-icon-box" aria-hidden="true">🥽</div>
+              <div class="mask-details">
+                <h4 data-i18n="mask.p100">P100 respirator</h4>
+                <p data-i18n="mask.p100Desc">Filters 99.97% of particles</p>
+                <span class="mask-tag tag-optional" id="tagP100">--</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Activities -->
+      <section class="card grid-col-2" data-tab="plan" aria-labelledby="activitiesTitle">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="activitiesTitle"><i class="fa-solid fa-person-biking" aria-hidden="true"></i> <span data-i18n="card.activities">Is it safe to...?</span></h2>
+            <p class="card-subtitle" data-i18n="card.activitiesSub">Everyday activities, checked against today's air</p>
+          </div>
+        </div>
+        <ul id="activityGrid" class="activities-grid"></ul>
+      </section>
+
+      <!-- Forecast -->
+      <section class="card grid-col-4" id="chartCard" data-tab="forecast" aria-labelledby="forecastTitle">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" tabindex="-1"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> <span id="forecastTitle" data-i18n="card.forecast">Air quality forecast</span></h2>
+            <p class="card-subtitle" data-i18n="card.forecastSub">AQI on the US EPA scale (0–500). Lower is better.</p>
+          </div>
+          <div class="chart-tabs" role="group" data-i18n-label="card.forecast">
+            <button class="chart-tab-btn active" type="button" data-chart="hourly" aria-pressed="true" data-i18n="chart.hourly">Next 24 hours</button>
+            <button class="chart-tab-btn" type="button" data-chart="daily" aria-pressed="false" data-i18n="chart.daily">Next 7 days</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="mainChart" role="img" aria-label="Air quality forecast"></canvas>
+        </div>
+      </section>
+
+      <!-- Map -->
+      <section class="card grid-col-4 map-card" id="mapCard" data-tab="map" aria-labelledby="mapTitle">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="mapTitle" tabindex="-1"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> <span data-i18n="card.map">Air quality map</span></h2>
+            <p class="card-subtitle" data-i18n="card.mapSub">Tap anywhere to check the air. Colored dots show AQI across the area.</p>
+          </div>
+        </div>
+        <div id="map" class="map-container" role="region" data-i18n-label="card.map"></div>
+        <div id="mapStatus" class="map-status" aria-live="polite" data-i18n="map.loading">Loading map...</div>
+      </section>
+
     </div>
+  </main>
 
-  </div> <!-- End Dashboard Grid -->
-
-  <!-- Footer -->
-  <footer>
-    <p>🌱 <strong>AirWise Pro</strong> • Real-Time Air Quality Intelligence Powered by Open-Meteo & WAQI APIs.</p>
-    <p style="margin-top: 6px; font-size: 12px;">Built for GitHub Pages • <a href="https://rajveersanghvi86-afk.github.io/airwise-pro/" target="_blank" rel="noopener">AirWise Live Web App</a></p>
+  <footer data-tab="now">
+    <p>🌱 <span data-i18n="footer">AirWise Pro · Live air quality from Open-Meteo and WAQI.</span></p>
   </footer>
 
-</div> <!-- End App Container -->
+</div>
 
-<!-- API Key Settings Modal -->
+<!-- Bottom navigation (phone layout) -->
+<nav class="bottom-nav" data-i18n-label="nav.label">
+  <button type="button" data-nav="now"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i><span data-i18n="nav.now">Now</span></button>
+  <button type="button" data-nav="plan"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i><span data-i18n="nav.plan">Plan</span></button>
+  <button type="button" data-nav="forecast"><i class="fa-solid fa-chart-line" aria-hidden="true"></i><span data-i18n="nav.forecast">Forecast</span></button>
+  <button type="button" data-nav="map"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span data-i18n="nav.map">Map</span></button>
+  <button type="button" data-open-settings><i class="fa-solid fa-sliders" aria-hidden="true"></i><span data-i18n="nav.settings">Settings</span></button>
+</nav>
+
+<!-- Settings -->
 <div id="settingsModal" class="modal-backdrop">
   <div class="modal-box">
     <div class="modal-header">
-      <h3 style="font-size: 18px; font-weight: 700;"><i class="fa-solid fa-sliders"></i> Settings</h3>
-      <button id="closeModal" class="modal-close" aria-label="Close settings"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">WAQI API Token (Optional)</label>
-      <input type="text" id="waqiTokenInput" spellcheck="false" class="form-input" placeholder="Paste your WAQI token here...">
-      <p style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
-        Optional. Adds readings from the nearest real monitoring station (within 50 km). Get a free token at <a href="https://aqicn.org/data-platform/token/" target="_blank" rel="noopener">aqicn.org</a>. Leave blank to use Open-Meteo model data only.
-      </p>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Default City</label>
-      <input type="text" id="defaultCityInput" class="form-input" placeholder="e.g. New Delhi, London, Tokyo">
-      <p style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">Loads on startup instead of your GPS location. Leave blank to use your location.</p>
+      <h2 class="modal-title"><i class="fa-solid fa-sliders" aria-hidden="true"></i> <span data-i18n="settings.title">Settings</span></h2>
+      <button id="closeModal" class="modal-close" type="button" data-i18n-label="btn.close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
     </div>
 
     <div class="settings-row">
       <div class="form-group">
-        <label class="form-label" for="themeSelect">Appearance</label>
-        <select id="themeSelect" class="form-input">
-          <option value="system">Match my device</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
+        <label class="form-label" for="langSelectSettings"><i class="fa-solid fa-language" aria-hidden="true"></i> <span data-i18n="settings.language">Language</span></label>
+        <select id="langSelectSettings" class="form-input lang-select"></select>
       </div>
       <div class="form-group">
-        <label class="form-label" for="unitsSelect">Units</label>
+        <label class="form-label" for="themeSelect" data-i18n="settings.appearance">Appearance</label>
+        <select id="themeSelect" class="form-input">
+          <option value="system" data-i18n="settings.themeSystem">Match my device</option>
+          <option value="light" data-i18n="settings.themeLight">Light</option>
+          <option value="dark" data-i18n="settings.themeDark">Dark</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="layoutSelect"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> <span data-i18n="settings.layout">Layout</span></label>
+      <select id="layoutSelect" class="form-input" aria-describedby="layoutHint">
+        <option value="auto" data-i18n="settings.layoutAuto">Automatic (detect my device)</option>
+        <option value="phone" data-i18n="settings.layoutPhone">Phone (tabs at the bottom)</option>
+        <option value="desktop" data-i18n="settings.layoutDesktop">Computer (one long page)</option>
+      </select>
+      <p id="layoutHint" class="form-help"></p>
+    </div>
+
+    <div class="settings-row">
+      <div class="form-group">
+        <label class="form-label" for="unitsSelect" data-i18n="settings.units">Units</label>
         <select id="unitsSelect" class="form-input">
           <option value="metric">°C · km/h</option>
           <option value="imperial">°F · mph</option>
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label" for="liteSelect" data-i18n="settings.lite">Data saver &amp; lite mode</label>
+        <select id="liteSelect" class="form-input" aria-describedby="liteHelp">
+          <option value="auto" data-i18n="settings.liteAuto">Automatic</option>
+          <option value="on" data-i18n="settings.liteOn">On</option>
+          <option value="off" data-i18n="settings.liteOff">Off</option>
+        </select>
+      </div>
+    </div>
+    <p id="liteHelp" class="form-help form-help-block" data-i18n="settings.liteHelp">Turns off animations and blur, loads less data and checks less often.</p>
+
+    <div class="form-group">
+      <label class="form-label" for="defaultCityInput" data-i18n="settings.defaultCity">Default city</label>
+      <input type="text" id="defaultCityInput" class="form-input" data-i18n-placeholder="settings.defaultCityPlaceholder" aria-describedby="defaultCityHelp defaultCityError" autocomplete="address-level2">
+      <p id="defaultCityError" class="form-error" role="alert" hidden></p>
+      <p id="defaultCityHelp" class="form-help" data-i18n="settings.defaultCityHelp">Opens on startup instead of your GPS location.</p>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Personalize</label>
+      <label class="form-label" for="waqiTokenInput" data-i18n="settings.token">WAQI token (optional)</label>
+      <input type="text" id="waqiTokenInput" spellcheck="false" class="form-input" data-i18n-placeholder="settings.tokenPlaceholder" aria-describedby="tokenHelp" autocomplete="off">
+      <p id="tokenHelp" class="form-help"><span data-i18n="settings.tokenHelp">Adds readings from the nearest real monitoring station.</span> <a href="https://aqicn.org/data-platform/token/" target="_blank" rel="noopener">aqicn.org</a></p>
+    </div>
+
+    <div class="form-group">
+      <span class="form-label" data-i18n="settings.personalize">Personalize</span>
       <div class="settings-buttons">
-        <button class="btn-icon-text btn-small" data-open-quiz data-close-settings><i class="fa-solid fa-clipboard-question"></i> Health quiz</button>
-        <button class="btn-icon-text btn-small" id="settingsTourBtn"><i class="fa-regular fa-circle-question"></i> Replay tour</button>
+        <button class="btn-icon-text btn-small" type="button" data-open-quiz data-close-settings><i class="fa-solid fa-clipboard-question" aria-hidden="true"></i> <span data-i18n="settings.quiz">Health quiz</span></button>
+        <button class="btn-icon-text btn-small" type="button" id="settingsTourBtn"><i class="fa-regular fa-circle-question" aria-hidden="true"></i> <span data-i18n="settings.tour">Replay tour</span></button>
       </div>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Install as an app</label>
+      <span class="form-label" data-i18n="settings.install">Install as an app</span>
       <p id="installHint" class="settings-hint"></p>
     </div>
 
-    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
-      <button id="saveSettingsBtn" class="btn-icon-text btn-primary">Save Changes</button>
+    <div class="modal-actions">
+      <button id="saveSettingsBtn" class="btn-icon-text btn-primary" type="button" data-i18n="btn.saveChanges">Save changes</button>
     </div>
   </div>
 </div>
 
-<!-- Alerts Modal -->
+<!-- Alerts -->
 <div id="alertsModal" class="modal-backdrop">
   <div class="modal-box">
     <div class="modal-header">
-      <h3 style="font-size: 18px; font-weight: 700;"><i class="fa-solid fa-bell"></i> Air Quality Alerts</h3>
-      <button id="closeAlertsModal" class="modal-close" aria-label="Close alerts"><i class="fa-solid fa-xmark"></i></button>
+      <h2 class="modal-title"><i class="fa-solid fa-bell" aria-hidden="true"></i> <span data-i18n="alerts.title">Air quality alerts</span></h2>
+      <button id="closeAlertsModal" class="modal-close" type="button" data-i18n-label="btn.close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
     </div>
 
     <label class="switch-row">
       <span>
-        <strong>Turn on alerts</strong>
-        <small>Get notified when the air gets unhealthy</small>
+        <strong data-i18n="alerts.turnOn">Turn on alerts</strong>
+        <small data-i18n="alerts.turnOnSub">Get notified when the air gets unhealthy</small>
       </span>
-      <input type="checkbox" id="alertsEnabled" class="switch-input">
+      <input type="checkbox" id="alertsEnabled" class="switch-input" role="switch">
       <span class="switch-track" aria-hidden="true"></span>
     </label>
 
     <div class="form-group alert-option">
-      <label class="form-label" for="alertThreshold">Alert me when AQI goes above</label>
+      <label class="form-label" for="alertThreshold" data-i18n="alerts.threshold">Alert me when AQI goes above</label>
       <select id="alertThreshold" class="form-input">
-        <option value="50">50 · Leaving "Good"</option>
-        <option value="100">100 · Unhealthy for sensitive groups</option>
-        <option value="150">150 · Unhealthy for everyone</option>
-        <option value="200">200 · Very unhealthy</option>
-        <option value="300">300 · Hazardous</option>
+        <option value="50" data-i18n="alerts.opt50">50</option>
+        <option value="100" data-i18n="alerts.opt100">100</option>
+        <option value="150" data-i18n="alerts.opt150">150</option>
+        <option value="200" data-i18n="alerts.opt200">200</option>
+        <option value="300" data-i18n="alerts.opt300">300</option>
       </select>
     </div>
 
     <div class="alert-option alert-checks">
-      <label class="check-row"><input type="checkbox" id="alertForecast"> Warn me up to 6 hours before it gets bad</label>
-      <label class="check-row"><input type="checkbox" id="alertImprove"> Tell me when the air gets better again</label>
-      <label class="check-row"><input type="checkbox" id="alertFavorites"> Also watch my favorite places</label>
+      <label class="check-row"><input type="checkbox" id="alertForecast"> <span data-i18n="alerts.forecast">Warn me up to 6 hours before it gets bad</span></label>
+      <label class="check-row"><input type="checkbox" id="alertImprove"> <span data-i18n="alerts.improve">Tell me when the air gets better again</span></label>
+      <label class="check-row"><input type="checkbox" id="alertFavorites"> <span data-i18n="alerts.favorites">Also watch my saved places</span></label>
     </div>
 
-    <div id="notifPermissionStatus" class="perm-status"></div>
+    <div id="notifPermissionStatus" class="perm-status" aria-live="polite"></div>
 
     <p class="alert-note">
-      <i class="fa-solid fa-circle-info"></i>
-      AirWise checks every 15 minutes while it's open, even in a background tab. Alerts can't arrive while the page is closed.
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      <span data-i18n="alerts.note">AirWise checks every 15 minutes while it's open.</span>
     </p>
 
-    <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
-      <button id="testAlertBtn" class="btn-icon-text"><i class="fa-solid fa-paper-plane"></i> Send test</button>
-      <button id="saveAlertsBtn" class="btn-icon-text btn-primary">Save</button>
+    <div class="modal-actions modal-actions-split">
+      <button id="testAlertBtn" class="btn-icon-text" type="button"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> <span data-i18n="alerts.test">Send test</span></button>
+      <button id="saveAlertsBtn" class="btn-icon-text btn-primary" type="button" data-i18n="btn.save">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Health Quiz Modal -->
-<div id="quizModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="quizHeading">
+<!-- Health quiz -->
+<div id="quizModal" class="modal-backdrop" aria-labelledby="quizHeading">
   <div class="modal-box quiz-box">
     <div class="modal-header">
-      <h3 id="quizHeading" style="font-size: 18px; font-weight: 700;"><i class="fa-solid fa-clipboard-question"></i> Health Quiz</h3>
-      <button id="closeQuizModal" class="modal-close" aria-label="Close quiz"><i class="fa-solid fa-xmark"></i></button>
+      <h2 id="quizHeading" class="modal-title"><i class="fa-solid fa-clipboard-question" aria-hidden="true"></i> <span data-i18n="settings.quiz">Health quiz</span></h2>
+      <button id="closeQuizModal" class="modal-close" type="button" data-i18n-label="btn.close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
     </div>
-    <div class="quiz-progress"><div id="quizProgressBar" class="quiz-progress-bar"></div></div>
-    <div id="quizBody"></div>
+    <div class="quiz-progress" aria-hidden="true"><div id="quizProgressBar" class="quiz-progress-bar"></div></div>
+    <div id="quizBody" aria-live="polite"></div>
   </div>
 </div>
 
-<!-- Welcome Modal (first visit) -->
-<div id="welcomeModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+<!-- Welcome (first visit) -->
+<div id="welcomeModal" class="modal-backdrop" aria-labelledby="welcomeTitle">
   <div class="modal-box welcome-box">
+    <div class="welcome-lang">
+      <label for="langSelectWelcome"><i class="fa-solid fa-language" aria-hidden="true"></i> <span class="sr-only" data-i18n="welcome.language">Language</span></label>
+      <select id="langSelectWelcome" class="form-input lang-select"></select>
+    </div>
     <div class="welcome-icon"><img src="icon.svg" alt="" width="64" height="64"></div>
-    <h3 id="welcomeTitle">Welcome to AirWise</h3>
-    <p>Live air quality, the best time to go outside, and health advice that fits you.</p>
+    <h2 id="welcomeTitle" data-i18n="welcome.title">Welcome to AirWise</h2>
+    <p data-i18n="welcome.text">Live air quality, the best time to go outside, and health advice that fits you.</p>
     <div class="welcome-actions">
-      <button id="welcomeQuiz" class="welcome-option">
-        <i class="fa-solid fa-user-shield"></i>
-        <span><strong>Personalize my advice</strong><small>1-minute health quiz, with an asthma check</small></span>
+      <button id="welcomeQuiz" class="welcome-option" type="button">
+        <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+        <span><strong data-i18n="welcome.quiz">Personalize my advice</strong><small data-i18n="welcome.quizSub">1-minute health quiz, with an asthma check</small></span>
       </button>
-      <button id="welcomeTour" class="welcome-option">
-        <i class="fa-solid fa-route"></i>
-        <span><strong>Show me around</strong><small>A quick tour of the dashboard</small></span>
+      <button id="welcomeTour" class="welcome-option" type="button">
+        <i class="fa-solid fa-route" aria-hidden="true"></i>
+        <span><strong data-i18n="welcome.tour">Show me around</strong><small data-i18n="welcome.tourSub">A quick tour of the app</small></span>
       </button>
     </div>
-    <button id="welcomeSkip" class="tour-skip">Skip for now</button>
+    <button id="welcomeSkip" class="tour-skip" type="button" data-i18n="welcome.skip">Skip for now</button>
   </div>
 </div>
 
-<!-- Guided Tour -->
-<div id="tourOverlay" class="tour-overlay" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+<!-- Guided tour -->
+<div id="tourOverlay" class="tour-overlay" aria-labelledby="tourTitle">
   <div id="tourSpotlight" class="tour-spotlight"></div>
   <div id="tourPopover" class="tour-popover"></div>
 </div>
 
-<!-- Toast notifications -->
+<!-- Live regions -->
 <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+<div id="srAnnouncer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-<!-- Chart.js CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-<!-- Leaflet.js CDN -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- Main Script -->
-<script src="script.js"></script>
-<script src="favorites.js"></script>
-<script src="alerts.js"></script>
-<script src="personal.js"></script>
-<script src="tour.js"></script>
-<script src="prefs.js"></script>
-<script src="pwa.js"></script>
-<script src="map.js"></script>
-
+<script src="app.min.js"></script>
 </body>
 </html>

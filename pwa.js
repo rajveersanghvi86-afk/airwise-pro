@@ -60,12 +60,12 @@ function initPWA() {
 
   window.addEventListener("online", () => {
     renderOnlineStatus();
-    showToast("Back online", "Refreshing air quality data.", "success");
+    showToast(t("online.back"), "", "success");
     refreshData();
   });
   window.addEventListener("offline", () => {
     renderOnlineStatus();
-    showToast("You're offline", "Showing the last saved data.", "warn");
+    showToast(t("online.off"), "", "warn");
   });
 
   renderOnlineStatus();

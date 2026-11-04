@@ -3,22 +3,15 @@
    - Keeps the last air quality / weather responses for offline use
    - Shows notifications and focuses the app when one is clicked */
 
-const VERSION = "v4";
+const VERSION = "v5";
 const SHELL_CACHE = `airwise-shell-${VERSION}`;
 const DATA_CACHE = `airwise-data-${VERSION}`;
 
 const SHELL_FILES = [
   "./",
   "index.html",
-  "style.css",
-  "script.js",
-  "favorites.js",
-  "alerts.js",
-  "personal.js",
-  "tour.js",
-  "prefs.js",
-  "pwa.js",
-  "map.js",
+  "app.min.css",
+  "app.min.js",
   "manifest.webmanifest",
   "icon.svg",
   "icon-192.png",
@@ -38,8 +31,8 @@ self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
     await cache.addAll(SHELL_FILES);
-    // CDN files are nice to have offline; don't fail install if one is down
-    await Promise.all(CDN_FILES.map(url => cache.add(url).catch(() => {})));
+    // CDN libraries (chart, map) are cached the first time they're used,
+    // not up front, so a first visit doesn't download what it may never need
     await self.skipWaiting();
   })());
 });

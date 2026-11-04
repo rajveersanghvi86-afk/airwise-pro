@@ -40,10 +40,11 @@ function toggleCurrentFavorite() {
   const idx = state.favorites.findIndex(f => f.id === id);
   if (idx >= 0) {
     state.favorites.splice(idx, 1);
-    showToast(`Removed ${state.currentCityName} from favorites`, "", "info");
+    showToast(t("fav.removed", { city: state.currentCityName }), "", "info");
   } else {
     if (state.favorites.length >= MAX_FAVORITES) {
-      showToast("Favorites are full", `You can save up to ${MAX_FAVORITES} places. Remove one first.`, "warn");
+      showToast(t("fav.full", { n: MAX_FAVORITES }), "", "warn");
+      buzz([30, 40, 30]);
       return;
     }
     state.favorites.push({
@@ -56,8 +57,9 @@ function toggleCurrentFavorite() {
     // We already know this place's AQI, no need to wait for the next fetch
     const aqi = getCurrentAQI();
     if (isValidNumber(aqi)) state.favoriteAQI[id] = aqi;
-    showToast(`Saved ${state.currentCityName} to favorites`, "", "success");
+    showToast(t("fav.saved", { city: state.currentCityName }), "", "success");
   }
+  buzz();
   saveFavorites();
   renderFavButton();
   renderFavorites();
@@ -70,7 +72,8 @@ function removeFavorite(id) {
   saveFavorites();
   renderFavButton();
   renderFavorites();
-  if (fav) showToast(`Removed ${fav.city} from favorites`, "", "info");
+  if (fav) showToast(t("fav.removed", { city: fav.city }), "", "info");
+  buzz();
 }
 
 function renderFavButton() {
@@ -78,8 +81,8 @@ function renderFavButton() {
   if (!btn) return;
   const saved = isCurrentFavorite();
   btn.classList.toggle("is-saved", saved);
-  btn.innerHTML = `<i class="fa-${saved ? "solid" : "regular"} fa-star"></i>`;
-  btn.title = saved ? "Remove from favorites" : "Save to favorites";
+  btn.innerHTML = `<i class="fa-${saved ? "solid" : "regular"} fa-star" aria-hidden="true"></i>`;
+  btn.title = saved ? t("fav.remove") : t("fav.save");
   btn.setAttribute("aria-label", btn.title);
   btn.setAttribute("aria-pressed", saved ? "true" : "false");
 }
@@ -88,9 +91,10 @@ function renderFavorites() {
   const list = document.getElementById("favoritesList");
   if (!list) return;
   if (typeof renderMapFavorites === "function") renderMapFavorites();
+  list.closest(".favorites-bar")?.classList.toggle("is-empty", state.favorites.length === 0);
 
   if (state.favorites.length === 0) {
-    list.innerHTML = `<span class="favorites-empty">Tap <i class="fa-regular fa-star"></i> next to a city name to save it here.</span>`;
+    list.innerHTML = `<li class="favorites-empty">${escapeHTML(t("fav.empty"))}</li>`;
     return;
   }
 
@@ -99,16 +103,20 @@ function renderFavorites() {
     const aqi = state.favoriteAQI[f.id];
     const lvl = isValidNumber(aqi) ? getAQILevel(aqi) : null;
     const badge = lvl
-      ? `<span class="fav-aqi" style="background: ${lvl.color}22; color: ${lvl.color}; border-color: ${lvl.color}55;" title="${lvl.category}">${lvl.value}</span>`
+      ? `<span class="fav-aqi" style="background: ${lvl.color}22; color: ${lvl.text}; border-color: ${lvl.color}55;" title="${lvl.category}">${lvl.value}</span>`
       : `<span class="fav-aqi fav-aqi-empty">--</span>`;
+    const aqiText = lvl ? `, ${t("aqi.label")} ${lvl.value}, ${lvl.category}` : "";
     return `
-      <div class="fav-chip${f.id === activeId ? " active" : ""}" data-id="${escapeHTML(f.id)}" role="button" tabindex="0" title="${escapeHTML(f.city)}${f.country ? ", " + escapeHTML(f.country) : ""}">
-        ${badge}
-        <span class="fav-name">${escapeHTML(f.city)}</span>
-        <button class="fav-remove" data-remove="${escapeHTML(f.id)}" aria-label="Remove ${escapeHTML(f.city)} from favorites" title="Remove">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>`;
+      <li class="fav-item">
+        <div class="fav-chip${f.id === activeId ? " active" : ""}" data-id="${escapeHTML(f.id)}" role="button" tabindex="0"
+          aria-label="${escapeHTML(f.city)}${aqiText}"${f.id === activeId ? ' aria-current="true"' : ""}>
+          ${badge}
+          <span class="fav-name">${escapeHTML(f.city)}</span>
+          <button class="fav-remove" data-remove="${escapeHTML(f.id)}" aria-label="${escapeHTML(t("fav.removeOne", { city: f.city }))}" title="${escapeHTML(t("fav.removeOne", { city: f.city }))}">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+      </li>`;
   }).join("");
 }
 
@@ -146,7 +154,7 @@ function initFavorites() {
 
   const openChip = (chip) => {
     const fav = state.favorites.find(f => f.id === chip.dataset.id);
-    if (fav) loadData(fav.lat, fav.lon, fav.city, fav.country);
+    if (fav) { buzz(); loadData(fav.lat, fav.lon, fav.city, fav.country); }
   };
 
   list?.addEventListener("click", (e) => {
