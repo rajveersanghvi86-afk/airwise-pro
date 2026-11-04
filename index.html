@@ -36,19 +36,19 @@
       <div class="search-box">
         <div class="search-input-wrapper">
           <i class="fa-solid fa-magnifying-glass search-icon"></i>
-          <input type="text" id="searchInput" class="search-input" placeholder="Search city or location..." autocomplete="off">
+          <input type="text" id="searchInput" aria-label="Search city or location" class="search-input" placeholder="Search city or location..." autocomplete="off">
         </div>
         <div id="searchResults" class="search-results"></div>
       </div>
 
       <!-- Geolocation Button -->
-      <button id="geoBtn" class="btn-icon-text btn-primary" title="Detect Current Geolocation">
+      <button id="geoBtn" class="btn-icon-text btn-primary" title="Detect Current Geolocation" aria-label="Use my location">
         <i class="fa-solid fa-location-crosshairs"></i>
         <span>My Location</span>
       </button>
 
       <!-- Settings Button -->
-      <button id="settingsBtn" class="btn-icon-text" title="API Key Settings">
+      <button id="settingsBtn" class="btn-icon-text" title="Settings" aria-label="Settings">
         <i class="fa-solid fa-sliders"></i>
       </button>
     </div>
@@ -221,7 +221,7 @@
       <div class="card-header">
         <div>
           <h3 class="card-title"><i class="fa-solid fa-clock"></i> Best Outdoor Time Planner</h3>
-          <span class="card-subtitle">Hourly AI forecast window for outdoor activities</span>
+          <span class="card-subtitle">Cleanest hours in the next 24 hours, in local time</span>
         </div>
       </div>
 
@@ -320,7 +320,7 @@
       <div class="card-header">
         <div>
           <h3 class="card-title"><i class="fa-solid fa-chart-line"></i> Air Quality Predictions & 7-Day Trend</h3>
-          <span class="card-subtitle">Hourly & Daily PM2.5 Forecast</span>
+          <span class="card-subtitle">Hourly & daily US AQI forecast</span>
         </div>
         <div class="chart-tabs">
           <button class="chart-tab-btn active" data-chart="hourly">24-Hour Hourly</button>
@@ -350,7 +350,7 @@
   <!-- Footer -->
   <footer>
     <p>🌱 <strong>AirWise Pro</strong> • Real-Time Air Quality Intelligence Powered by Open-Meteo & WAQI APIs.</p>
-    <p style="margin-top: 6px; font-size: 12px;">Built for GitHub Pages • <a href="https://rajveersanghvi86-afk.github.io/airwise/" target="_blank">AirWise Live Web App</a></p>
+    <p style="margin-top: 6px; font-size: 12px;">Built for GitHub Pages • <a href="https://rajveersanghvi86-afk.github.io/airwise-pro/" target="_blank" rel="noopener">AirWise Live Web App</a></p>
   </footer>
 
 </div> <!-- End App Container -->
@@ -360,20 +360,21 @@
   <div class="modal-box">
     <div class="modal-header">
       <h3 style="font-size: 18px; font-weight: 700;"><i class="fa-solid fa-sliders"></i> Settings & API Key Configuration</h3>
-      <button id="closeModal" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+      <button id="closeModal" class="modal-close" aria-label="Close settings"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
     <div class="form-group">
       <label class="form-label">WAQI API Token (Optional)</label>
-      <input type="text" id="waqiTokenInput" class="form-input" placeholder="Paste your WAQI token here...">
+      <input type="text" id="waqiTokenInput" spellcheck="false" class="form-input" placeholder="Paste your WAQI token here...">
       <p style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
-        Leave blank to use the built-in free Open-Meteo global API server.
+        Optional. Adds readings from the nearest real monitoring station (within 50 km). Get a free token at <a href="https://aqicn.org/data-platform/token/" target="_blank" rel="noopener">aqicn.org</a>. Leave blank to use Open-Meteo model data only.
       </p>
     </div>
 
     <div class="form-group">
       <label class="form-label">Default City</label>
       <input type="text" id="defaultCityInput" class="form-input" placeholder="e.g. New Delhi, London, Tokyo">
+      <p style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">Loads on startup instead of your GPS location. Leave blank to use your location.</p>
     </div>
 
     <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
@@ -383,7 +384,7 @@
 </div>
 
 <!-- Chart.js CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <!-- Leaflet.js CDN -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

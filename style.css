@@ -1107,3 +1107,57 @@ footer a {
 footer a:hover {
   text-decoration: underline;
 }
+
+/* Loading, error & highlight states */
+body.is-loading .aqi-number,
+body.is-loading .pollutants-grid,
+body.is-loading .timeline-strip {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+body.is-loading #updatedTime::after {
+  content: " • Refreshing...";
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.error-text {
+  color: #f87171 !important;
+}
+.timeline-best {
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.6), 0 0 16px rgba(16, 185, 129, 0.25);
+}
+.profile-chip:focus-visible,
+.chart-tab-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.form-group a {
+  color: var(--accent-primary);
+}
+
+/* Keep cards inside their columns */
+.dashboard-grid > .card { min-width: 0; }
+.activities-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.activity-card { min-width: 0; }
+
+/* Phone header: brand on top, search + buttons on their own row */
+@media (max-width: 640px) {
+  header {
+    flex-wrap: wrap;
+    padding: 14px 16px;
+  }
+  .header-actions {
+    flex-basis: 100%;
+    max-width: none;
+    gap: 10px;
+  }
+  .search-box {
+    max-width: none;
+    min-width: 0;
+  }
+  #geoBtn span {
+    display: none;
+  }
+}
