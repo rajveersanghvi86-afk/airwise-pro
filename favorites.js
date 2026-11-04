@@ -87,6 +87,7 @@ function renderFavButton() {
 function renderFavorites() {
   const list = document.getElementById("favoritesList");
   if (!list) return;
+  if (typeof renderMapFavorites === "function") renderMapFavorites();
 
   if (state.favorites.length === 0) {
     list.innerHTML = `<span class="favorites-empty">Tap <i class="fa-regular fa-star"></i> next to a city name to save it here.</span>`;
