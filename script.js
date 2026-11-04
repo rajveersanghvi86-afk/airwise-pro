@@ -257,10 +257,16 @@ function getNext24Hours() {
 
 // Initialization
 document.addEventListener("DOMContentLoaded", () => {
+  initPrefs();
+  initPersonal();
   initEventListeners();
   initMap();
   initFavorites();
   initAlerts();
+  initPWA();
+  initTour();
+
+  if (!PROFILES[state.currentProfile]) state.currentProfile = "general";
 
   if (state.waqiToken) document.getElementById("waqiTokenInput").value = state.waqiToken;
   if (state.defaultCity) document.getElementById("defaultCityInput").value = state.defaultCity.city;
@@ -272,7 +278,11 @@ document.addEventListener("DOMContentLoaded", () => {
     c.setAttribute("aria-pressed", active ? "true" : "false");
   });
 
-  if (state.defaultCity) {
+  // A shared link (?lat=&lon=&city=) wins, then the saved default city, then GPS
+  const linked = readLocationFromURL();
+  if (linked) {
+    loadData(linked.lat, linked.lon, linked.city, linked.country);
+  } else if (state.defaultCity) {
     const d = state.defaultCity;
     loadData(d.lat, d.lon, d.city, d.country);
   } else {
@@ -365,6 +375,11 @@ function initEventListeners() {
   // Settings Modal
   const modal = document.getElementById("settingsModal");
   document.getElementById("settingsBtn").addEventListener("click", () => modal.classList.add("active"));
+  modal.querySelectorAll("[data-close-settings]").forEach(el => el.addEventListener("click", () => modal.classList.remove("active")));
+  document.getElementById("settingsTourBtn").addEventListener("click", () => {
+    modal.classList.remove("active");
+    startTour();
+  });
   document.getElementById("closeModal").addEventListener("click", () => modal.classList.remove("active"));
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("active"); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") modal.classList.remove("active"); });
@@ -539,6 +554,7 @@ async function loadData(lat, lon, cityName, country) {
 
   document.getElementById("locName").innerText = `${cityName}${country ? ", " + country : ""}`;
   setLoading(true);
+  updateURL();
   if (typeof renderFavButton === "function") {
     renderFavButton();
     renderFavorites();
@@ -598,6 +614,7 @@ async function loadData(lat, lon, cityName, country) {
 
 // Favorites and alerts run after the main view has rendered
 async function afterDataLoaded() {
+  renderPersonalPlan();
   if (typeof checkAlertsForCurrent !== "function") return;
   checkAlertsForCurrent();
   const favResults = await fetchFavoritesAQI();
@@ -668,9 +685,9 @@ function renderHeroAQI() {
   const windCardinal = getWindCardinal(wx.wind_direction_10m);
   const uvCategory = getUvRiskCategory(wx.uv_index);
 
-  document.getElementById("tempVal").innerText = isValidNumber(wx.temperature_2m) ? `${Math.round(wx.temperature_2m)}°C` : "--°C";
+  document.getElementById("tempVal").innerText = formatTemp(wx.temperature_2m);
   document.getElementById("humidityVal").innerText = isValidNumber(wx.relative_humidity_2m) ? `${Math.round(wx.relative_humidity_2m)}%` : "--%";
-  document.getElementById("windVal").innerText = isValidNumber(wx.wind_speed_10m) ? `${Math.round(wx.wind_speed_10m)} km/h ${windCardinal}`.trim() : "-- km/h";
+  document.getElementById("windVal").innerText = formatWind(wx.wind_speed_10m, windCardinal);
   document.getElementById("uvVal").innerText = isValidNumber(wx.uv_index) ? `${wx.uv_index.toFixed(1)} (${uvCategory})` : "--";
 }
 
@@ -705,7 +722,7 @@ function renderPollutants() {
     } else {
       badgeEl.innerText = "Sub-AQI --";
       badgeEl.style.color = "var(--text-muted)";
-      badgeEl.style.background = "rgba(255, 255, 255, 0.08)";
+      badgeEl.style.background = "rgba(var(--fg-rgb), 0.08)";
       badgeEl.style.border = "none";
       catEl.innerText = "N/A";
       catEl.style.color = "var(--text-dim)";
@@ -989,7 +1006,7 @@ function renderCharts() {
         tension: 0.35,
         spanGaps: true,
         pointBackgroundColor: (c) => (isValidNumber(c.raw) ? getAQILevel(c.raw).color : "#ffffff"),
-        pointBorderColor: "#ffffff",
+        pointBorderColor: cssVar("--bg-solid"),
         pointRadius: 4,
         pointHoverRadius: 6
       }]
@@ -1000,8 +1017,10 @@ function renderCharts() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#111827",
-          borderColor: "rgba(255,255,255,0.1)",
+          backgroundColor: cssVar("--bg-solid"),
+          titleColor: cssVar("--text-main"),
+          bodyColor: cssVar("--text-muted"),
+          borderColor: cssVar("--border-highlight"),
           borderWidth: 1,
           titleFont: { family: "Plus Jakarta Sans", size: 13, weight: "bold" },
           bodyFont: { family: "Plus Jakarta Sans", size: 12 },
@@ -1012,13 +1031,13 @@ function renderCharts() {
       },
       scales: {
         x: {
-          grid: { color: "rgba(255, 255, 255, 0.05)" },
-          ticks: { color: "#9ca3af", font: { family: "Plus Jakarta Sans", size: 11 } }
+          grid: { color: cssVar("--border-color") },
+          ticks: { color: cssVar("--text-muted"), font: { family: "Plus Jakarta Sans", size: 11 } }
         },
         y: {
           beginAtZero: true,
-          grid: { color: "rgba(255, 255, 255, 0.05)" },
-          ticks: { color: "#9ca3af", font: { family: "Plus Jakarta Sans", size: 11 } }
+          grid: { color: cssVar("--border-color") },
+          ticks: { color: cssVar("--text-muted"), font: { family: "Plus Jakarta Sans", size: 11 } }
         }
       }
     }
@@ -1032,10 +1051,20 @@ function initMap() {
 
   state.map = L.map("map").setView([state.currentLat, state.currentLon], 11);
 
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  setMapTheme(resolvedTheme());
+}
+
+// CARTO tiles: dark_all for dark mode, light_all for light mode
+function setMapTheme(theme) {
+  if (!state.map) return;
+  const style = theme === "light" ? "light_all" : "dark_all";
+  if (state.tileStyle === style) return;
+  if (state.tileLayer) state.map.removeLayer(state.tileLayer);
+  state.tileLayer = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`, {
     attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
     maxZoom: 18
   }).addTo(state.map);
+  state.tileStyle = style;
 }
 
 function updateMap() {
