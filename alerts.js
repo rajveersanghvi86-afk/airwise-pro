@@ -68,7 +68,7 @@ function showToast(title, body = "", kind = "info", color = null) {
   const toast = document.createElement("div");
   toast.className = `toast toast-${kind}`;
   toast.setAttribute("role", kind === "alert" || kind === "warn" ? "alert" : "status");
-  if (color) toast.style.borderLeftColor = color;
+  if (color) toast.style.setProperty("--toast-color", color);
   toast.innerHTML = `
     <i class="fa-solid ${icons[kind] || icons.info} toast-icon"${color ? ` style="color: ${color};"` : ""} aria-hidden="true"></i>
     <div class="toast-text">

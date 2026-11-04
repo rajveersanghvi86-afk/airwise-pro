@@ -3,7 +3,7 @@
    - Keeps the last air quality / weather responses for offline use
    - Shows notifications and focuses the app when one is clicked */
 
-const VERSION = "v5";
+const VERSION = "v6";
 const SHELL_CACHE = `airwise-shell-${VERSION}`;
 const DATA_CACHE = `airwise-data-${VERSION}`;
 

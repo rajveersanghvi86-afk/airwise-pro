@@ -1,6 +1,9 @@
 # AirWise Pro
 
-Live air quality for any city: the AQI right now, the best time to go outside, mask and activity advice, a 7-day forecast, an interactive map and alerts. It works on phones and computers, in English, हिन्दी and Español, and offline.
+Live air quality for any city: the AQI right now, the best time to go outside, mask and activity advice, a 7-day forecast, an interactive map and alerts. It works on phones and computers, offline, and in 28 languages:
+
+- **Indian:** हिन्दी, বাংলা, తెలుగు, मराठी, தமிழ், ગુજરાતી, ಕನ್ನಡ, മലയാളം, ଓଡ଼ିଆ, ਪੰਜਾਬੀ, اردو
+- **World:** English, Español, 中文, Français, العربية, Português, Русский, 日本語, Deutsch, 한국어, Türkçe, Italiano, Bahasa Indonesia, Tiếng Việt, ไทย, Kiswahili, فارسی
 
 Live site: https://rajveersanghvi86-afk.github.io/airwise-pro/
 
@@ -17,7 +20,8 @@ Commit the rebuilt `app.min.*` files too, since GitHub Pages serves them directl
 
 | File | What it does |
 | --- | --- |
-| `i18n.js` | All interface text in each language, plus date and time formatting |
+| `i18n.js` | Language list, English text, loading other languages, date and time formatting |
+| `lang/*.json` | One file per language, downloaded only when chosen. `npm run build` checks that every file has every string and the same `{placeholders}` as English |
 | `script.js` | Data loading, AQI maths, the main dashboard cards |
 | `ui.js` | Phone and computer layouts, bottom tabs, lite mode, dialogs, vibration |
 | `search.js` | Typo-tolerant and offline city search |
