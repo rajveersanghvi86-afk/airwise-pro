@@ -22,7 +22,10 @@
       try { pref = localStorage.getItem("airwise_theme") || "system"; lang = localStorage.getItem("airwise_lang"); } catch (e) {}
       var dark = pref === "dark" || (pref === "system" && !(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches));
       d.setAttribute("data-theme", dark ? "dark" : "light");
-      if (lang) d.setAttribute("lang", lang);
+      if (lang) {
+        d.setAttribute("lang", lang);
+        if (lang === "ar" || lang === "ur" || lang === "fa") d.setAttribute("dir", "rtl");
+      }
     })();
   </script>
 

@@ -248,7 +248,7 @@ function initUI() {
 
   // Settings: language, layout, lite mode
   document.querySelectorAll(".lang-select").forEach(sel => {
-    sel.innerHTML = Object.entries(LANGUAGES).map(([code, l]) => `<option value="${code}" lang="${code}">${l.name}</option>`).join("");
+    sel.innerHTML = languageOptionsHTML();
     sel.value = currentLang;
     sel.addEventListener("change", (e) => { setLanguage(e.target.value); buzz(); });
   });

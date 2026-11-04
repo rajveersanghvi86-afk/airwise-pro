@@ -246,7 +246,11 @@ function getNext24Hours() {
 
 /* ---------- Start-up ---------- */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // Get the chosen language file first so the page never flashes in English
+  if (currentLang !== "en") {
+    try { await loadLanguage(currentLang); } catch (e) { currentLang = "en"; }
+  }
   applyTranslations();
   initUI();          // layout, tabs, lite mode, modals, haptics (ui.js)
   initPrefs();

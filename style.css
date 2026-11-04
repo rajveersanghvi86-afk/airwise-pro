@@ -2792,3 +2792,42 @@ body[data-layout="phone"] .dashboard-grid { order: 1; }
 body[data-layout="phone"][data-tab="now"] .favorites-bar { order: 0; }
 body[data-layout="phone"][data-tab="now"] .profile-bar { order: 2; margin: 14px 0 0; }
 body[data-layout="phone"] .favorites-bar.is-empty { display: none !important; }
+
+/* Toast accent color set from JS, works in both reading directions */
+.toast[style*="--toast-color"] { border-left-color: var(--toast-color); }
+
+/* ==========================================================================
+   Right-to-left languages (Arabic, Urdu, Persian)
+   ========================================================================== */
+[dir="rtl"] body { text-align: right; }
+[dir="rtl"] .search-icon { margin-right: 0; margin-left: 10px; }
+[dir="rtl"] .search-item-country { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .toast-container { right: auto; left: 20px; }
+[dir="rtl"] .toast { border-left: 1px solid var(--border-highlight); border-right: 4px solid var(--accent-primary); }
+[dir="rtl"] .toast-success { border-right-color: #10b981; }
+[dir="rtl"] .toast-warn { border-right-color: #f59e0b; }
+[dir="rtl"] .toast[style*="--toast-color"] { border-right-color: var(--toast-color); }
+[dir="rtl"] .quiz-option,
+[dir="rtl"] .welcome-option,
+[dir="rtl"] .quiz-result,
+[dir="rtl"] .aqi-info { text-align: right; }
+[dir="rtl"] .quiz-control { border-left: none; border-right: 4px solid; }
+[dir="rtl"] .quiz-summary i { margin-right: 0; margin-left: 6px; }
+[dir="rtl"] .welcome-lang { justify-content: flex-start; margin: -8px 0 4px -8px; }
+[dir="rtl"] .switch-input:checked + .switch-track::after { transform: translateX(-20px); }
+[dir="rtl"] .switch-track::after { left: auto; right: 3px; }
+[dir="rtl"] .skip-link { left: auto; right: 12px; }
+[dir="rtl"] .fa-arrow-left,
+[dir="rtl"] .fa-arrow-right { transform: scaleX(-1); }
+[dir="rtl"] body[data-layout="phone"] .header-buttons { margin-left: 0; margin-right: auto; }
+@media (max-width: 640px) {
+  [dir="rtl"] .toast-container { left: 16px; right: 16px; }
+}
+/* Maps read left to right in every language */
+[dir="rtl"] .leaflet-container { direction: ltr; text-align: left; }
+[dir="rtl"] .leaflet-popup-content { direction: rtl; text-align: right; }
+/* Numbers and times stay in their natural order inside RTL text */
+[dir="rtl"] .aqi-number,
+[dir="rtl"] .timeline-aqi,
+[dir="rtl"] .metric-val,
+[dir="rtl"] .pollutant-value { direction: ltr; unicode-bidi: isolate; }

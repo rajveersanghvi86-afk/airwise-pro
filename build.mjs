@@ -3,7 +3,7 @@
 //   npm run build
 // Produces app.min.js (one file, rewritten for older browsers: Chrome 61+,
 // Safari 11+, Firefox 60+) and app.min.css. index.html loads only these.
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { transform } from "esbuild";
 
 // Order matters: later files use globals from earlier ones
@@ -25,3 +25,20 @@ const kb = n => (n / 1024).toFixed(1) + " KB";
 console.log(`app.min.js  ${kb(js.length)} -> ${kb(outJs.code.length)}`);
 console.log(`app.min.css ${kb(css.length)} -> ${kb(outCss.code.length)}`);
 [...outJs.warnings, ...outCss.warnings].forEach(w => console.warn("warning:", w.text));
+
+// Check every language file: same keys and same {placeholders} as English
+const en = new Function(readFileSync("i18n.js", "utf8").replace(/function detectLanguage[\s\S]*$/, "") + "; return STRINGS.en;")();
+const holes = s => (s.match(/\{\w+\}/g) || []).sort().join(",");
+let problems = 0;
+for (const file of readdirSync("lang").filter(f => f.endsWith(".json"))) {
+  const dict = JSON.parse(readFileSync(`lang/${file}`, "utf8"));
+  const missing = Object.keys(en).filter(k => !(k in dict));
+  const extra = Object.keys(dict).filter(k => !(k in en));
+  const badVars = Object.keys(en).filter(k => k in dict && holes(en[k]) !== holes(dict[k]));
+  if (missing.length || extra.length || badVars.length) {
+    problems++;
+    console.warn(`lang/${file}: ${missing.length} missing, ${extra.length} unknown, ${badVars.length} placeholder mismatches`,
+      [...missing, ...extra, ...badVars].slice(0, 8).join(" "));
+  }
+}
+console.log(problems ? `${problems} language file(s) need fixes (missing text falls back to English)` : "All language files complete");
