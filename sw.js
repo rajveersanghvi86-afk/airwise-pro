@@ -3,7 +3,7 @@
    - Keeps the last air quality / weather responses for offline use
    - Shows notifications and focuses the app when one is clicked */
 
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL_CACHE = `airwise-shell-${VERSION}`;
 const DATA_CACHE = `airwise-data-${VERSION}`;
 
@@ -18,6 +18,7 @@ const SHELL_FILES = [
   "tour.js",
   "prefs.js",
   "pwa.js",
+  "map.js",
   "manifest.webmanifest",
   "icon.svg",
   "icon-192.png",
@@ -56,43 +57,47 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // Air quality & weather: network first, fall back to the last saved copy
+  // Air quality & weather: network first, fall back to the saved copy of the
+  // exact same request (never another place's data)
   if (DATA_HOSTS.includes(url.hostname)) {
-    event.respondWith(networkFirst(req));
+    event.respondWith(networkFirst(req, DATA_CACHE));
     return;
   }
 
-  // App files and CDN libraries: serve cached copy fast, update in the background
-  if (url.origin === self.location.origin || CDN_FILES.includes(req.url) || url.hostname === "fonts.gstatic.com" || url.hostname === "fonts.googleapis.com" || url.hostname === "cdnjs.cloudflare.com") {
-    event.respondWith(staleWhileRevalidate(req, url.origin === self.location.origin && req.mode === "navigate"));
+  // App files: network first so updates show up right away, cache when offline
+  if (url.origin === self.location.origin) {
+    event.respondWith(networkFirst(req, SHELL_CACHE, req.mode === "navigate"));
+    return;
+  }
+
+  // Versioned CDN libraries and fonts never change: cache first
+  if (CDN_FILES.includes(req.url) || ["fonts.gstatic.com", "fonts.googleapis.com", "cdnjs.cloudflare.com"].includes(url.hostname)) {
+    event.respondWith(cacheFirst(req));
   }
 });
 
-async function networkFirst(req) {
-  const cache = await caches.open(DATA_CACHE);
+async function networkFirst(req, cacheName, isNavigation = false) {
+  const cache = await caches.open(cacheName);
   try {
     const res = await fetch(req);
-    if (res.ok) cache.put(req, res.clone());
+    if (res.ok) cache.put(isNavigation ? "index.html" : req, res.clone());
     return res;
   } catch (e) {
-    const cached = await cache.match(req, { ignoreSearch: false });
+    const cached = isNavigation
+      ? (await cache.match("index.html")) || (await cache.match("./"))
+      : await cache.match(req);
     if (cached) return cached;
-    // Different coordinates than last time: use the closest saved response for that API
-    const all = await cache.keys();
-    const sameApi = all.reverse().find(r => new URL(r.url).hostname === new URL(req.url).hostname && new URL(r.url).pathname === new URL(req.url).pathname);
-    if (sameApi) return cache.match(sameApi);
     throw e;
   }
 }
 
-async function staleWhileRevalidate(req, isNavigation) {
+async function cacheFirst(req) {
   const cache = await caches.open(SHELL_CACHE);
-  const cached = await cache.match(req, { ignoreSearch: isNavigation }) || (isNavigation ? await cache.match("index.html") : null);
-  const network = fetch(req).then(res => {
-    if (res && (res.ok || res.type === "opaque")) cache.put(isNavigation ? "index.html" : req, res.clone());
-    return res;
-  }).catch(() => null);
-  return cached || (await network) || new Response("Offline", { status: 503, statusText: "Offline" });
+  const cached = await cache.match(req);
+  if (cached) return cached;
+  const res = await fetch(req);
+  if (res && (res.ok || res.type === "opaque")) cache.put(req, res.clone());
+  return res;
 }
 
 self.addEventListener("notificationclick", (event) => {

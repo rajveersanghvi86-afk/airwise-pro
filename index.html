@@ -400,15 +400,16 @@
     </div>
 
     <!-- INTERACTIVE AIR QUALITY MAP -->
-    <div class="card grid-col-4">
+    <div class="card grid-col-4 map-card" id="mapCard">
       <div class="card-header">
         <div>
           <h3 class="card-title"><i class="fa-solid fa-map-location-dot"></i> Interactive Air Quality Map</h3>
-          <span class="card-subtitle">Regional monitoring stations and geographical data</span>
+          <span class="card-subtitle">Tap anywhere to check the air · colored dots show AQI across the area</span>
         </div>
       </div>
 
-      <div id="map" class="map-container"></div>
+      <div id="map" class="map-container" aria-label="Air quality map"></div>
+      <div id="mapStatus" class="map-status">Loading map...</div>
     </div>
 
   </div> <!-- End Dashboard Grid -->
@@ -583,6 +584,7 @@
 <script src="tour.js"></script>
 <script src="prefs.js"></script>
 <script src="pwa.js"></script>
+<script src="map.js"></script>
 
 </body>
 </html>
