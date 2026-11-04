@@ -259,6 +259,8 @@ function getNext24Hours() {
 document.addEventListener("DOMContentLoaded", () => {
   initEventListeners();
   initMap();
+  initFavorites();
+  initAlerts();
 
   if (state.waqiToken) document.getElementById("waqiTokenInput").value = state.waqiToken;
   if (state.defaultCity) document.getElementById("defaultCityInput").value = state.defaultCity.city;
@@ -277,9 +279,9 @@ document.addEventListener("DOMContentLoaded", () => {
     detectLocation();
   }
 
-  // Auto refresh, paused while the tab is hidden
+  // Auto refresh. Keeps going in a hidden tab only when alerts are on.
   state.refreshTimer = setInterval(() => {
-    if (!document.hidden) refreshData();
+    if (!document.hidden || state.alerts?.enabled) refreshData();
   }, REFRESH_INTERVAL_MS);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && state.lastLoaded && Date.now() - state.lastLoaded > REFRESH_INTERVAL_MS) {
@@ -537,6 +539,10 @@ async function loadData(lat, lon, cityName, country) {
 
   document.getElementById("locName").innerText = `${cityName}${country ? ", " + country : ""}`;
   setLoading(true);
+  if (typeof renderFavButton === "function") {
+    renderFavButton();
+    renderFavorites();
+  }
 
   const aqVars = "us_aqi,us_aqi_pm2_5,us_aqi_pm10,us_aqi_nitrogen_dioxide,us_aqi_ozone,us_aqi_sulphur_dioxide,us_aqi_carbon_monoxide,pm2_5,pm10,nitrogen_dioxide,ozone,sulphur_dioxide,carbon_monoxide";
   const aqUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=${aqVars}&hourly=us_aqi,pm2_5&forecast_days=7&timezone=auto`;
@@ -580,6 +586,7 @@ async function loadData(lat, lon, cityName, country) {
     renderActivities();
     renderCharts();
     updateMap();
+    afterDataLoaded();
   } catch (err) {
     if (requestId !== state.requestId) return;
     console.error("Failed to load air quality data:", err);
@@ -587,6 +594,14 @@ async function loadData(lat, lon, cityName, country) {
   } finally {
     if (requestId === state.requestId) setLoading(false);
   }
+}
+
+// Favorites and alerts run after the main view has rendered
+async function afterDataLoaded() {
+  if (typeof checkAlertsForCurrent !== "function") return;
+  checkAlertsForCurrent();
+  const favResults = await fetchFavoritesAQI();
+  checkAlertsForFavorites(favResults);
 }
 
 // 1. Hero Speedometer & Status Pill

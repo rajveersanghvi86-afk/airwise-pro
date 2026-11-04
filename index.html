@@ -12,6 +12,8 @@
   <!-- Leaflet CSS for Interactive Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+
   <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -47,6 +49,11 @@
         <span>My Location</span>
       </button>
 
+      <!-- Alerts Button -->
+      <button id="alertsBtn" class="btn-icon-text" title="Air quality alerts" aria-label="Air quality alerts">
+        <i class="fa-regular fa-bell"></i>
+      </button>
+
       <!-- Settings Button -->
       <button id="settingsBtn" class="btn-icon-text" title="Settings" aria-label="Settings">
         <i class="fa-solid fa-sliders"></i>
@@ -76,6 +83,15 @@
     </div>
   </div>
 
+  <!-- Favorite Locations Bar -->
+  <div class="favorites-bar">
+    <div class="profile-info">
+      <i class="fa-solid fa-star" style="color: #fbbf24;"></i>
+      <span>Favorites:</span>
+    </div>
+    <div id="favoritesList" class="favorites-list"></div>
+  </div>
+
   <!-- Main Dashboard Grid -->
   <div class="dashboard-grid">
 
@@ -84,6 +100,7 @@
       <div class="location-meta">
         <i class="fa-solid fa-location-dot" style="color: #ef4444;"></i>
         <span id="locName" class="location-name">Detecting Location...</span>
+        <button id="favBtn" class="fav-toggle" title="Save to favorites" aria-label="Save to favorites" aria-pressed="false"><i class="fa-regular fa-star"></i></button>
         <span id="stationName" class="station-name-tag"></span>
         <span id="updatedTime" style="color: var(--text-dim); font-weight: 400; font-size: 13px;"></span>
       </div>
@@ -383,6 +400,57 @@
   </div>
 </div>
 
+<!-- Alerts Modal -->
+<div id="alertsModal" class="modal-backdrop">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-size: 18px; font-weight: 700;"><i class="fa-solid fa-bell"></i> Air Quality Alerts</h3>
+      <button id="closeAlertsModal" class="modal-close" aria-label="Close alerts"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <label class="switch-row">
+      <span>
+        <strong>Turn on alerts</strong>
+        <small>Get notified when the air gets unhealthy</small>
+      </span>
+      <input type="checkbox" id="alertsEnabled" class="switch-input">
+      <span class="switch-track" aria-hidden="true"></span>
+    </label>
+
+    <div class="form-group alert-option">
+      <label class="form-label" for="alertThreshold">Alert me when AQI goes above</label>
+      <select id="alertThreshold" class="form-input">
+        <option value="50">50 · Leaving "Good"</option>
+        <option value="100">100 · Unhealthy for sensitive groups</option>
+        <option value="150">150 · Unhealthy for everyone</option>
+        <option value="200">200 · Very unhealthy</option>
+        <option value="300">300 · Hazardous</option>
+      </select>
+    </div>
+
+    <div class="alert-option alert-checks">
+      <label class="check-row"><input type="checkbox" id="alertForecast"> Warn me up to 6 hours before it gets bad</label>
+      <label class="check-row"><input type="checkbox" id="alertImprove"> Tell me when the air gets better again</label>
+      <label class="check-row"><input type="checkbox" id="alertFavorites"> Also watch my favorite places</label>
+    </div>
+
+    <div id="notifPermissionStatus" class="perm-status"></div>
+
+    <p class="alert-note">
+      <i class="fa-solid fa-circle-info"></i>
+      AirWise checks every 15 minutes while it's open, even in a background tab. Alerts can't arrive while the page is closed.
+    </p>
+
+    <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+      <button id="testAlertBtn" class="btn-icon-text"><i class="fa-solid fa-paper-plane"></i> Send test</button>
+      <button id="saveAlertsBtn" class="btn-icon-text btn-primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notifications -->
+<div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
 <!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
@@ -391,6 +459,8 @@
 
 <!-- Main Script -->
 <script src="script.js"></script>
+<script src="favorites.js"></script>
+<script src="alerts.js"></script>
 
 </body>
 </html>
