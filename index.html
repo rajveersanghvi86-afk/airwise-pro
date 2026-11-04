@@ -13,6 +13,22 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="AirWise">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Set the theme before the page paints, so there's no flash -->
+  <script>
+    (function () {
+      var pref = "system";
+      try { pref = localStorage.getItem("airwise_theme") || "system"; } catch (e) {}
+      var dark = pref === "dark" || (pref === "system" && !(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches));
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    })();
+  </script>
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
@@ -54,6 +70,22 @@
         <i class="fa-regular fa-bell"></i>
       </button>
 
+      <!-- Theme Toggle -->
+      <button id="themeBtn" class="btn-icon-text" title="Switch theme" aria-label="Switch theme">
+        <i class="fa-solid fa-sun"></i>
+      </button>
+
+      <!-- Tour / Help -->
+      <button id="helpBtn" class="btn-icon-text" title="Take the tour" aria-label="Take the tour">
+        <i class="fa-regular fa-circle-question"></i>
+      </button>
+
+      <!-- Install App (shown when the browser allows it) -->
+      <button id="installBtn" class="btn-icon-text btn-install" title="Install AirWise as an app" aria-label="Install app" hidden>
+        <i class="fa-solid fa-download"></i>
+        <span>Install</span>
+      </button>
+
       <!-- Settings Button -->
       <button id="settingsBtn" class="btn-icon-text" title="Settings" aria-label="Settings">
         <i class="fa-solid fa-sliders"></i>
@@ -80,6 +112,9 @@
       <div class="profile-chip" data-profile="athlete">
         <i class="fa-solid fa-person-running"></i> Outdoor Athletes
       </div>
+      <div class="profile-chip profile-chip-personal" data-profile="personal" hidden>
+        <i class="fa-solid fa-user-gear"></i> My Profile
+      </div>
     </div>
   </div>
 
@@ -101,6 +136,8 @@
         <i class="fa-solid fa-location-dot" style="color: #ef4444;"></i>
         <span id="locName" class="location-name">Detecting Location...</span>
         <button id="favBtn" class="fav-toggle" title="Save to favorites" aria-label="Save to favorites" aria-pressed="false"><i class="fa-regular fa-star"></i></button>
+        <button id="shareBtn" class="fav-toggle share-toggle" title="Share this city's air quality" aria-label="Share"><i class="fa-solid fa-share-nodes"></i></button>
+        <span id="offlinePill" class="offline-pill" hidden><i class="fa-solid fa-wifi"></i> Offline</span>
         <span id="stationName" class="station-name-tag"></span>
         <span id="updatedTime" style="color: var(--text-dim); font-weight: 400; font-size: 13px;"></span>
       </div>
@@ -231,6 +268,18 @@
           <div class="pollutant-bar-bg"><div id="barCO" class="pollutant-bar-fill"></div></div>
         </div>
       </div>
+    </div>
+
+    <!-- PERSONAL HEALTH PLAN -->
+    <div class="card grid-col-4 personal-plan-card" id="personalPlanCard">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title"><i class="fa-solid fa-user-shield"></i> Your Personal Plan</h3>
+          <span class="card-subtitle">Advice tuned to your health, age and activity</span>
+        </div>
+        <div id="personalPlanActions" class="plan-actions"></div>
+      </div>
+      <div id="personalPlanBody"></div>
     </div>
 
     <!-- OUTDOOR TIME PLANNER (WHEN TO GO OUT) -->
@@ -376,7 +425,7 @@
 <div id="settingsModal" class="modal-backdrop">
   <div class="modal-box">
     <div class="modal-header">
-      <h3 style="font-size: 18px; font-weight: 700;"><i class="fa-solid fa-sliders"></i> Settings & API Key Configuration</h3>
+      <h3 style="font-size: 18px; font-weight: 700;"><i class="fa-solid fa-sliders"></i> Settings</h3>
       <button id="closeModal" class="modal-close" aria-label="Close settings"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
@@ -392,6 +441,37 @@
       <label class="form-label">Default City</label>
       <input type="text" id="defaultCityInput" class="form-input" placeholder="e.g. New Delhi, London, Tokyo">
       <p style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">Loads on startup instead of your GPS location. Leave blank to use your location.</p>
+    </div>
+
+    <div class="settings-row">
+      <div class="form-group">
+        <label class="form-label" for="themeSelect">Appearance</label>
+        <select id="themeSelect" class="form-input">
+          <option value="system">Match my device</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="unitsSelect">Units</label>
+        <select id="unitsSelect" class="form-input">
+          <option value="metric">°C · km/h</option>
+          <option value="imperial">°F · mph</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Personalize</label>
+      <div class="settings-buttons">
+        <button class="btn-icon-text btn-small" data-open-quiz data-close-settings><i class="fa-solid fa-clipboard-question"></i> Health quiz</button>
+        <button class="btn-icon-text btn-small" id="settingsTourBtn"><i class="fa-regular fa-circle-question"></i> Replay tour</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Install as an app</label>
+      <p id="installHint" class="settings-hint"></p>
     </div>
 
     <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
@@ -448,6 +528,44 @@
   </div>
 </div>
 
+<!-- Health Quiz Modal -->
+<div id="quizModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="quizHeading">
+  <div class="modal-box quiz-box">
+    <div class="modal-header">
+      <h3 id="quizHeading" style="font-size: 18px; font-weight: 700;"><i class="fa-solid fa-clipboard-question"></i> Health Quiz</h3>
+      <button id="closeQuizModal" class="modal-close" aria-label="Close quiz"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="quiz-progress"><div id="quizProgressBar" class="quiz-progress-bar"></div></div>
+    <div id="quizBody"></div>
+  </div>
+</div>
+
+<!-- Welcome Modal (first visit) -->
+<div id="welcomeModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+  <div class="modal-box welcome-box">
+    <div class="welcome-icon"><img src="icon.svg" alt="" width="64" height="64"></div>
+    <h3 id="welcomeTitle">Welcome to AirWise</h3>
+    <p>Live air quality, the best time to go outside, and health advice that fits you.</p>
+    <div class="welcome-actions">
+      <button id="welcomeQuiz" class="welcome-option">
+        <i class="fa-solid fa-user-shield"></i>
+        <span><strong>Personalize my advice</strong><small>1-minute health quiz, with an asthma check</small></span>
+      </button>
+      <button id="welcomeTour" class="welcome-option">
+        <i class="fa-solid fa-route"></i>
+        <span><strong>Show me around</strong><small>A quick tour of the dashboard</small></span>
+      </button>
+    </div>
+    <button id="welcomeSkip" class="tour-skip">Skip for now</button>
+  </div>
+</div>
+
+<!-- Guided Tour -->
+<div id="tourOverlay" class="tour-overlay" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+  <div id="tourSpotlight" class="tour-spotlight"></div>
+  <div id="tourPopover" class="tour-popover"></div>
+</div>
+
 <!-- Toast notifications -->
 <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
@@ -461,6 +579,10 @@
 <script src="script.js"></script>
 <script src="favorites.js"></script>
 <script src="alerts.js"></script>
+<script src="personal.js"></script>
+<script src="tour.js"></script>
+<script src="prefs.js"></script>
+<script src="pwa.js"></script>
 
 </body>
 </html>
