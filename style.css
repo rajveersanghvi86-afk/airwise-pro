@@ -2,7 +2,7 @@
    AirWise Pro - Modern AQI Intelligence & Health Safety CSS Design System
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+/* Web font is loaded by ui.js without blocking the first paint (skipped in lite mode) */
 
 :root {
   /* Design Tokens */
@@ -18,7 +18,7 @@
   
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
-  --text-dim: #6b7280;
+  --text-dim: #8b95a7;      /* 5.6:1 or better on dark surfaces */
   
   /* AQI Color Scale */
   --aqi-good: #10b981;          /* 0-50 Green */
@@ -36,7 +36,9 @@
   
   /* Primary Accent */
   --accent-primary: #3b82f6;
-  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --accent-text: #93c5fd;     /* blue text on dark surfaces, 7:1+ */
+  --accent-strong: #2563eb;   /* blue behind white text, 5:1+ */
+  --accent-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); /* white text 5:1+ */
   --accent-glow: rgba(59, 130, 246, 0.25);
   
   --radius-sm: 8px;
@@ -73,8 +75,10 @@
   --border-highlight: rgba(15, 23, 42, 0.2);
   --text-main: #0f172a;
   --text-muted: #475569;
-  --text-dim: #64748b;
+  --text-dim: #526072;      /* 5.5:1 or better on light surfaces */
   --accent-glow: rgba(59, 130, 246, 0.18);
+  --accent-primary: #2563eb;
+  --accent-text: #1d4ed8;
   --shadow-main: 0 10px 30px -12px rgba(15, 23, 42, 0.18);
   --shadow-glow: 0 0 25px rgba(59, 130, 246, 0.1);
   --fg-rgb: 15, 23, 42;
@@ -166,7 +170,7 @@ header {
   font-weight: 700;
   text-transform: uppercase;
   background: var(--accent-glow);
-  color: var(--accent-primary);
+  color: var(--accent-text);
   border: 1px solid rgba(59, 130, 246, 0.3);
   padding: 2px 8px;
   border-radius: 20px;
@@ -211,6 +215,7 @@ header {
 
 .search-input {
   width: 100%;
+  min-height: 44px;
   background: transparent;
   border: none;
   outline: none;
@@ -419,7 +424,7 @@ header {
 }
 
 .card-title i {
-  color: var(--accent-primary);
+  color: var(--accent-text);
   font-size: 18px;
 }
 
@@ -599,7 +604,7 @@ header {
 
 .metric-icon {
   font-size: 16px;
-  color: var(--accent-primary);
+  color: var(--accent-text);
   margin-bottom: 4px;
 }
 
@@ -631,7 +636,7 @@ header {
 .station-name-tag {
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent-primary);
+  color: var(--accent-text);
   background: rgba(59, 130, 246, 0.12);
   border: 1px solid rgba(59, 130, 246, 0.3);
   padding: 2px 10px;
@@ -755,10 +760,11 @@ header {
   flex-shrink: 0;
 }
 
-.window-info h4 {
-  font-size: 16px;
+.window-info h3 {
+  font-size: 17px;
   font-weight: 700;
-  color: #34d399;
+  color: var(--text-main);
+  line-height: 1.35;
 }
 
 .window-info p {
@@ -809,7 +815,7 @@ header {
 }
 
 .timeline-badge {
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 10px;
@@ -840,7 +846,7 @@ header {
 .mask-recommend-icon {
   font-size: 42px;
   margin-bottom: 12px;
-  color: var(--accent-primary);
+  color: var(--accent-text);
 }
 
 .mask-decision-title {
@@ -908,7 +914,7 @@ header {
 }
 
 .mask-tag {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   padding: 2px 6px;
   border-radius: 4px;
@@ -918,7 +924,7 @@ header {
 }
 
 .tag-recommended {
-  background: #3b82f6;
+  background: #2563eb;
   color: #fff;
 }
 
@@ -986,7 +992,7 @@ header {
 }
 
 .activity-badge {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 12px;
@@ -1142,7 +1148,7 @@ footer {
 }
 
 footer a {
-  color: var(--accent-primary);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
@@ -1176,7 +1182,7 @@ button:disabled {
   outline-offset: 2px;
 }
 .form-group a {
-  color: var(--accent-primary);
+  color: var(--accent-text);
 }
 
 /* Keep cards inside their columns */
@@ -1507,7 +1513,7 @@ select.form-input option {
 .toast-icon {
   font-size: 18px;
   margin-top: 1px;
-  color: var(--accent-primary);
+  color: var(--accent-text);
 }
 
 .toast-success .toast-icon { color: #10b981; }
@@ -1583,7 +1589,7 @@ select.form-input option {
 .share-toggle:hover,
 .share-toggle:focus-visible {
   background: rgba(59, 130, 246, 0.15);
-  color: var(--accent-primary);
+  color: var(--accent-text);
 }
 
 .offline-pill {
@@ -1720,7 +1726,7 @@ select.form-input option {
 }
 
 .plan-tips li i {
-  color: var(--accent-primary);
+  color: var(--accent-text);
   margin-top: 3px;
   width: 16px;
   text-align: center;
@@ -1882,7 +1888,7 @@ select.form-input option {
 
 .quiz-summary i {
   width: 18px;
-  color: var(--accent-primary);
+  color: var(--accent-text);
   margin-right: 6px;
 }
 
@@ -2014,7 +2020,7 @@ select.form-input option {
 .tour-count {
   font-size: 12px;
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--accent-text);
   margin-bottom: 4px;
 }
 
@@ -2302,3 +2308,487 @@ body.map-open { overflow: hidden; }
   .map-container { height: 380px; }
   .map-legend { max-width: 220px; font-size: 10px; }
 }
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -60px;
+  z-index: 3000;
+  padding: 10px 16px;
+  background: var(--accent-primary);
+  color: #fff;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+
+.skip-link:focus { top: 12px; }
+
+main:focus { outline: none; }
+
+/* Clear keyboard focus everywhere */
+:focus-visible {
+  outline: 3px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.leaflet-container :focus-visible { outline-offset: 0; }
+
+/* Lists used for structure, not bullets */
+.favorites-list,
+.timeline-strip,
+.activities-grid,
+.weather-metrics-grid,
+.mask-options-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.favorites-list { display: flex; }
+.fav-item { flex-shrink: 0; }
+.favorites-empty { list-style: none; }
+
+h2.location-name { font-size: 15px; margin: 0; }
+.card-title { font-size: 17px; }
+.modal-title { font-size: 18px; font-weight: 700; }
+.activity-title { font-size: 14px; margin: 0; }
+.mask-details h4 { font-size: 14px; margin: 0; }
+.window-info h3 { margin: 0; }
+
+.updated-time {
+  color: var(--text-dim);
+  font-weight: 400;
+  font-size: 13px;
+}
+
+/* Readable AQI-colored text in light mode (WCAG AA) */
+:root[data-theme="light"] .aqi-status-good,
+:root[data-theme="light"] .badge-allowed,
+:root[data-theme="light"] .tag-not-needed { color: #047857; }
+:root[data-theme="light"] .aqi-status-moderate,
+:root[data-theme="light"] .badge-caution,
+:root[data-theme="light"] .dominant-tag { color: #92400e; }
+:root[data-theme="light"] .aqi-status-sensitive { color: #c2410c; }
+:root[data-theme="light"] .aqi-status-unhealthy,
+:root[data-theme="light"] .badge-avoid { color: #b91c1c; }
+:root[data-theme="light"] .aqi-status-very-unhealthy { color: #7e22ce; }
+:root[data-theme="light"] .aqi-status-hazardous { color: #9f1239; }
+:root[data-theme="light"] .btn-install { color: #047857; }
+:root[data-theme="light"] .offline-pill { color: #92400e; }
+:root[data-theme="light"] .quiz-badge,
+:root[data-theme="light"] .profile-chip-personal,
+:root[data-theme="light"] .profile-chip-personal.active { color: #047857; }
+
+.plan-risk-value { color: var(--risk-text, var(--risk-color)); }
+
+/* "What is AQI?" explainer */
+.aqi-info {
+  max-width: 420px;
+  margin: 4px auto 16px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.aqi-info summary {
+  cursor: pointer;
+  color: var(--accent-text);
+  font-weight: 600;
+  text-align: center;
+  list-style: none;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.aqi-info summary::-webkit-details-marker { display: none; }
+
+.aqi-info p {
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--fg-rgb), calc(0.05 * var(--fg-k)));
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* Search results */
+.search-results:not([hidden]) { display: block; }
+
+.search-note {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.search-item { min-height: 48px; }
+.search-item i { color: var(--accent-text); }
+.search-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.search-item[aria-selected="true"] {
+  background: rgba(59, 130, 246, 0.15);
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+
+.search-input::-webkit-search-cancel-button { cursor: pointer; }
+
+/* Forms */
+.form-help {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.form-help-block { margin: -8px 0 16px; }
+
+.form-error {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f87171;
+  margin-top: 6px;
+}
+
+:root[data-theme="light"] .form-error { color: #b91c1c; }
+.form-error::before { content: "⚠"; }
+.form-input[aria-invalid="true"] { border-color: #ef4444; }
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.modal-actions-split { justify-content: space-between; }
+
+.retry-btn { margin-top: 10px; display: inline-flex; }
+
+.welcome-lang {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: -8px -8px 4px 0;
+}
+
+.welcome-lang .form-input { width: auto; padding: 6px 10px; }
+
+/* ==========================================================================
+   Touch targets & press feedback
+   ========================================================================== */
+button,
+.profile-chip,
+.fav-chip,
+.chart-tab-btn,
+.welcome-option,
+.quiz-option {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.btn-icon-text:active,
+.profile-chip:active,
+.fav-chip:active,
+.chart-tab-btn:active,
+.quiz-option:active,
+.welcome-option:active,
+.bottom-nav button:active,
+.map-popup-btn:active {
+  transform: scale(0.96);
+  filter: brightness(0.92);
+}
+
+.icon-btn { min-width: 44px; justify-content: center; }
+.btn-icon-text { min-height: 44px; }
+.btn-small { min-height: 36px; }
+.fav-toggle { width: 40px; height: 40px; }
+
+/* Bigger targets on touch screens (WCAG 2.5.5: 44 × 44 px) */
+@media (pointer: coarse) {
+  .btn-small { min-height: 44px; }
+  .fav-toggle { width: 44px; height: 44px; }
+  .fav-remove { width: 32px; height: 32px; }
+  .profile-chip { min-height: 44px; }
+  .fav-chip { min-height: 44px; }
+  .chart-tab-btn { min-height: 44px; padding-inline: 16px; }
+  .check-row { min-height: 44px; }
+  .check-row input { width: 22px; height: 22px; }
+  .form-input { min-height: 48px; font-size: 16px; } /* 16px stops iOS zooming in */
+  .search-input { font-size: 16px; }
+  .leaflet-bar a { width: 44px !important; height: 44px !important; line-height: 44px !important; }
+  .leaflet-control-layers-toggle { width: 44px !important; height: 44px !important; }
+  .toast-close { min-width: 44px; min-height: 44px; }
+  .modal-close { min-width: 44px; min-height: 44px; }
+}
+
+/* ==========================================================================
+   Bottom navigation & phone layout
+   ========================================================================== */
+.bottom-nav { display: none; }
+
+body[data-layout="phone"] .bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1300;
+  display: flex;
+  justify-content: space-around;
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg-solid);
+  border-top: 1px solid var(--border-color);
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, calc(0.25 * var(--shadow-k)));
+}
+
+.bottom-nav button {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--text-muted);
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.bottom-nav button i { font-size: 19px; }
+.bottom-nav button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.bottom-nav button.active {
+  color: var(--accent-text);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+body[data-layout="phone"] .app-container {
+  padding: 12px 12px calc(84px + env(safe-area-inset-bottom, 0px));
+}
+
+body[data-layout="phone"] .desktop-only { display: none !important; }
+
+/* Only the active tab's sections are shown */
+body[data-layout="phone"][data-tab="now"] [data-tab]:not([data-tab~="now"]),
+body[data-layout="phone"][data-tab="plan"] [data-tab]:not([data-tab~="plan"]),
+body[data-layout="phone"][data-tab="forecast"] [data-tab]:not([data-tab~="forecast"]),
+body[data-layout="phone"][data-tab="map"] [data-tab]:not([data-tab~="map"]) {
+  display: none !important;
+}
+
+body[data-layout="phone"] .dashboard-grid {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+body[data-layout="phone"] .grid-col-2,
+body[data-layout="phone"] .grid-col-3,
+body[data-layout="phone"] .grid-col-4 { grid-column: span 1; }
+
+body[data-layout="phone"] .card { padding: 18px 16px; }
+
+/* Compact header: brand + icon buttons on one row, search full width below */
+body[data-layout="phone"] .app-header {
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+body[data-layout="phone"] .header-actions {
+  display: contents;
+}
+
+body[data-layout="phone"] .header-buttons {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+body[data-layout="phone"] .search-box {
+  order: 10;
+  flex: 1 1 100%;
+  max-width: none;
+}
+
+body[data-layout="phone"] .btn-label { display: none; }
+body[data-layout="phone"] #geoBtn { min-width: 44px; justify-content: center; padding: 10px 12px; }
+body[data-layout="phone"] .brand-title { font-size: 20px; }
+
+/* Profile chips and favorites scroll sideways instead of wrapping */
+body[data-layout="phone"] .profile-bar,
+body[data-layout="phone"] .favorites-bar {
+  flex-wrap: nowrap;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  gap: 10px;
+}
+
+body[data-layout="phone"] .profile-info span { white-space: nowrap; }
+
+body[data-layout="phone"] .profile-options {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px;
+}
+
+body[data-layout="phone"] .profile-options::-webkit-scrollbar { display: none; }
+body[data-layout="phone"] .profile-chip { flex-shrink: 0; white-space: nowrap; }
+
+body[data-layout="phone"] .aqi-hero-card { padding: 20px 14px; }
+body[data-layout="phone"] .gauge-wrapper { width: 230px; }
+body[data-layout="phone"] .weather-metrics-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+body[data-layout="phone"] .metric-pill { padding: 10px 4px; }
+body[data-layout="phone"] .metric-val { font-size: 14px; }
+body[data-layout="phone"] .pollutants-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+body[data-layout="phone"] .mask-hero-wrapper { grid-template-columns: 1fr; }
+body[data-layout="phone"] .mask-options-grid { grid-template-columns: repeat(2, 1fr); }
+body[data-layout="phone"] .activities-grid { grid-template-columns: 1fr; }
+body[data-layout="phone"] .plan-layout { grid-template-columns: 1fr; }
+body[data-layout="phone"] .plan-cta { flex-direction: column; text-align: center; }
+body[data-layout="phone"] .chart-container { height: 300px; }
+body[data-layout="phone"] .card-header { flex-wrap: wrap; gap: 12px; }
+body[data-layout="phone"] .chart-tabs { width: 100%; }
+body[data-layout="phone"] .chart-tab-btn { flex: 1; }
+
+/* Map fills the screen on the Map tab */
+body[data-layout="phone"][data-tab="map"] .map-container {
+  height: calc(100vh - 290px);
+  min-height: 340px;
+}
+
+body[data-layout="phone"] .toast-container {
+  left: 12px;
+  right: 12px;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  max-width: none;
+}
+
+body[data-layout="phone"] footer { padding-bottom: 8px; }
+
+/* Desktop layout on a narrow window still stacks nicely */
+body[data-layout="desktop"] .bottom-nav { display: none; }
+
+/* ==========================================================================
+   Lite mode (older / budget phones, data saver) & reduced motion
+   ========================================================================== */
+body.lite *,
+body.lite *::before,
+body.lite *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+body.lite .card,
+body.lite .app-header,
+body.lite header,
+body.lite .modal-backdrop,
+body.lite .profile-bar,
+body.lite .favorites-bar {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.lite .card,
+body.lite .app-header,
+body.lite header { background: var(--bg-solid); }
+
+body.lite { background-image: none !important; }
+
+body.lite .card,
+body.lite .btn-primary,
+body.lite .pollutant-card,
+body.lite .activity-card,
+body.lite .aqi-marker > div { box-shadow: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Windows high contrast / forced colors */
+@media (forced-colors: active) {
+  .aqi-status-pill,
+  .profile-chip.active,
+  .bottom-nav button.active,
+  .fav-chip.active { border: 2px solid CanvasText; }
+}
+
+/* More light-mode contrast fixes */
+:root[data-theme="light"] .brand-badge,
+:root[data-theme="light"] .profile-chip.active { color: #1d4ed8; }
+:root[data-theme="light"] .error-text { color: #b91c1c !important; }
+:root[data-theme="light"] .fav-toggle.is-saved,
+:root[data-theme="light"] #alertsBtn.alerts-on { color: #b45309; }
+:root[data-theme="light"] .sens-typical { color: #047857; }
+:root[data-theme="light"] .sens-raised { color: #92400e; }
+:root[data-theme="light"] .sens-high { color: #c2410c; }
+:root[data-theme="light"] .sens-very-high { color: #b91c1c; }
+
+.tour-skip { min-height: 44px; padding: 8px 12px; }
+.window-badge-icon { color: #fff; }
+
+:root[data-theme="light"] .station-name-tag { color: #1d4ed8; }
+:root[data-theme="light"] .aqi-status-good { color: #065f46; }
+:root[data-theme="light"] .aqi-status-moderate { color: #7c2d12; }
+:root[data-theme="light"] .aqi-status-sensitive { color: #9a3412; }
+:root[data-theme="light"] .aqi-status-unhealthy { color: #991b1b; }
+:root[data-theme="light"] .aqi-status-very-unhealthy { color: #6b21a8; }
+:root[data-theme="light"] .aqi-status-hazardous { color: #881337; }
+
+/* White text always sits on the deeper blue */
+.chart-tab-btn.active,
+.map-popup-btn,
+.skip-link,
+.tag-recommended { background: var(--accent-strong); border-color: var(--accent-strong); }
+:root[data-theme="light"] .tag-not-needed { color: #065f46; }
+.brand-badge { color: var(--accent-text); }
+:root[data-theme="light"] .badge-allowed { color: #065f46; }
+:root[data-theme="light"] .badge-caution { color: #7c2d12; }
+:root[data-theme="light"] .badge-avoid { color: #991b1b; }
+
+/* Phone: the AQI comes first on the Now tab */
+body[data-layout="phone"] main { display: flex; flex-direction: column; }
+body[data-layout="phone"] .dashboard-grid { order: 1; }
+body[data-layout="phone"][data-tab="now"] .favorites-bar { order: 0; }
+body[data-layout="phone"][data-tab="now"] .profile-bar { order: 2; margin: 14px 0 0; }
+body[data-layout="phone"] .favorites-bar.is-empty { display: none !important; }

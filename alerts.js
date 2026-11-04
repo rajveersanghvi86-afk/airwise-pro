@@ -70,12 +70,12 @@ function showToast(title, body = "", kind = "info", color = null) {
   toast.setAttribute("role", kind === "alert" || kind === "warn" ? "alert" : "status");
   if (color) toast.style.borderLeftColor = color;
   toast.innerHTML = `
-    <i class="fa-solid ${icons[kind] || icons.info} toast-icon"${color ? ` style="color: ${color};"` : ""}></i>
+    <i class="fa-solid ${icons[kind] || icons.info} toast-icon"${color ? ` style="color: ${color};"` : ""} aria-hidden="true"></i>
     <div class="toast-text">
       <strong>${escapeHTML(title)}</strong>
       ${body ? `<span>${escapeHTML(body)}</span>` : ""}
     </div>
-    <button class="toast-close" aria-label="Dismiss"><i class="fa-solid fa-xmark"></i></button>`;
+    <button class="toast-close" aria-label="${escapeHTML(t("toast.dismiss"))}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>`;
 
   const remove = () => {
     toast.classList.add("toast-leaving");
@@ -83,7 +83,16 @@ function showToast(title, body = "", kind = "info", color = null) {
   };
   toast.querySelector(".toast-close").addEventListener("click", remove);
   container.appendChild(toast);
-  setTimeout(remove, kind === "alert" ? 12000 : 4500);
+
+  // Give people time to read: pause while hovered or focused
+  const delay = kind === "alert" ? 12000 : 6000;
+  let timer = setTimeout(remove, delay);
+  const pause = () => clearTimeout(timer);
+  const resume = () => { clearTimeout(timer); timer = setTimeout(remove, 3000); };
+  toast.addEventListener("mouseenter", pause);
+  toast.addEventListener("focusin", pause);
+  toast.addEventListener("mouseleave", resume);
+  toast.addEventListener("focusout", resume);
 
   // Keep the stack short
   while (container.children.length > 4) container.firstElementChild.remove();
@@ -130,14 +139,14 @@ function checkPlaceAlert(id, name, aqi, forecast = null) {
 
   if (isAbove && !memory.above) {
     sendNotification(
-      `Air quality alert: ${name}`,
-      `AQI is ${lvl.value} (${lvl.category}), above your limit of ${limit}.`,
+      t("alert.above", { name }),
+      t("alert.aboveBody", { aqi: lvl.value, cat: lvl.category, limit }),
       `aqi-${id}`, lvl.color
     );
   } else if (!isAbove && memory.above && state.alerts.notifyImprove) {
     sendNotification(
-      `Air is better in ${name}`,
-      `AQI dropped to ${lvl.value} (${lvl.category}), back under your limit of ${limit}.`,
+      t("alert.better", { name }),
+      t("alert.betterBody", { aqi: lvl.value, cat: lvl.category, limit }),
       `aqi-${id}`, lvl.color
     );
   }
@@ -149,8 +158,8 @@ function checkPlaceAlert(id, name, aqi, forecast = null) {
     if (upcoming && memory.warnedFor !== upcoming.time) {
       const fl = getAQILevel(upcoming.aqi);
       sendNotification(
-        `Air getting worse in ${name}`,
-        `AQI is forecast to reach ${fl.value} (${fl.category}) around ${formatHourLabel(upcoming.time, true)}. Plan outdoor time before then.`,
+        t("alert.soon", { name }),
+        t("alert.soonBody", { aqi: fl.value, cat: fl.category, time: formatHourLabel(upcoming.time, true) }),
         `forecast-${id}`, fl.color
       );
       memory.warnedFor = upcoming.time;
@@ -182,8 +191,9 @@ function renderAlertButton() {
   if (!btn) return;
   const on = state.alerts.enabled;
   btn.classList.toggle("alerts-on", on);
-  btn.innerHTML = `<i class="fa-${on ? "solid" : "regular"} fa-bell"></i>`;
-  btn.title = on ? `Alerts on (AQI above ${state.alerts.threshold})` : "Air quality alerts";
+  btn.innerHTML = `<i class="fa-${on ? "solid" : "regular"} fa-bell" aria-hidden="true"></i>`;
+  btn.setAttribute("aria-pressed", on ? "true" : "false");
+  btn.title = on ? t("alert.btnOn", { limit: state.alerts.threshold }) : t("btn.alerts");
   btn.setAttribute("aria-label", btn.title);
 }
 
@@ -192,10 +202,10 @@ function renderPermissionStatus() {
   if (!el) return;
   const perm = notificationPermission();
   const messages = {
-    granted: ["perm-ok", "fa-circle-check", "System notifications are allowed."],
-    denied: ["perm-bad", "fa-circle-xmark", "Notifications are blocked for this site. You'll still see alerts inside the page. To get system notifications, allow them in your browser's site settings."],
-    default: ["perm-wait", "fa-circle-question", "Your browser will ask for permission when you save with alerts on."],
-    unsupported: ["perm-bad", "fa-circle-xmark", "This browser doesn't support notifications. You'll still see alerts inside the page."]
+    granted: ["perm-ok", "fa-circle-check", t("perm.granted")],
+    denied: ["perm-bad", "fa-circle-xmark", t("perm.denied")],
+    default: ["perm-wait", "fa-circle-question", t("perm.default")],
+    unsupported: ["perm-bad", "fa-circle-xmark", t("perm.unsupported")]
   };
   const [cls, icon, text] = messages[perm] || messages.default;
   el.className = `perm-status ${cls}`;
@@ -243,12 +253,12 @@ async function saveAlertForm() {
   document.getElementById("alertsModal").classList.remove("active");
 
   if (state.alerts.enabled) {
-    const where = state.alerts.watchFavorites && state.favorites.length ? "this place and your favorites" : "this place";
-    showToast("Alerts are on", `We'll let you know when AQI goes above ${state.alerts.threshold} for ${where}.`, "success");
+    showToast(t("alert.on"), t("alert.onBody", { limit: state.alerts.threshold }), "success");
+    buzz();
     checkAlertsForCurrent();
     if (state.alerts.watchFavorites) checkAlertsForFavorites(await fetchFavoritesAQI());
   } else if (wasEnabled) {
-    showToast("Alerts are off", "", "info");
+    showToast(t("alert.off"), "", "info");
   }
 }
 
@@ -259,11 +269,11 @@ async function sendTestNotification() {
   }
   const aqi = getCurrentAQI();
   const lvl = isValidNumber(aqi) ? getAQILevel(aqi) : null;
-  const body = lvl ? `${state.currentCityName}: AQI ${lvl.value} (${lvl.category}). Alerts are working.` : "Alerts are working.";
+  const body = lvl ? t("alert.testBody", { place: state.currentCityName, aqi: lvl.value, cat: lvl.category }) : "";
   // Send even if alerts are not saved as enabled yet
   const prev = state.alerts.enabled;
   state.alerts.enabled = true;
-  await sendNotification("AirWise test alert", body, "airwise-test", lvl?.color);
+  await sendNotification(t("alert.test"), body, "airwise-test", lvl?.color);
   state.alerts.enabled = prev;
 }
 

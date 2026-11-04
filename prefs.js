@@ -3,7 +3,12 @@
    ========================================================================== */
 
 state.themePref = storage.get("airwise_theme") || "system"; // system | light | dark
-state.units = storage.get("airwise_units") || "metric";      // metric | imperial
+// Default units follow the region: °F and mph in the US and a few other places
+function defaultUnits() {
+  const region = String(navigator.language || "").split("-")[1] || "";
+  return ["US", "LR", "MM", "BS", "BZ", "KY", "PW"].includes(region.toUpperCase()) ? "imperial" : "metric";
+}
+state.units = storage.get("airwise_units") || defaultUnits();   // metric | imperial
 
 const systemDark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 
@@ -28,15 +33,17 @@ function applyTheme() {
 
   const btn = document.getElementById("themeBtn");
   if (btn) {
-    btn.innerHTML = `<i class="fa-solid ${theme === "light" ? "fa-moon" : "fa-sun"}"></i>`;
-    btn.title = theme === "light" ? "Switch to dark mode" : "Switch to light mode";
+    btn.innerHTML = `<i class="fa-solid ${theme === "light" ? "fa-moon" : "fa-sun"}" aria-hidden="true"></i>`;
+    btn.title = t("btn.theme");
     btn.setAttribute("aria-label", btn.title);
+    btn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
   }
   const select = document.getElementById("themeSelect");
   if (select) select.value = state.themePref;
 
   if (typeof setMapTheme === "function") setMapTheme(theme);
-  if (state.mainChart && typeof renderCharts === "function") renderCharts();
+  // Text colors depend on the theme, so redraw
+  if (state.aqiData && typeof renderAll === "function") renderAll();
 }
 
 function setThemePref(pref) {
@@ -86,16 +93,14 @@ function locationURL() {
 }
 
 function updateURL() {
-  try { history.replaceState(null, "", locationURL()); } catch (e) { /* ignore (e.g. file://) */ }
+  try { history.replaceState(history.state, "", locationURL() + location.hash); } catch (e) { /* ignore (e.g. file://) */ }
 }
 
 async function shareCurrent() {
   const aqi = getCurrentAQI();
   const lvl = isValidNumber(aqi) ? getAQILevel(aqi) : null;
   const place = `${state.currentCityName}${state.currentCountry ? ", " + state.currentCountry : ""}`;
-  const text = lvl
-    ? `Air quality in ${place} right now: AQI ${lvl.value} (${lvl.category}).`
-    : `Check the air quality in ${place}.`;
+  const text = lvl ? t("share.text", { place, aqi: lvl.value, cat: lvl.category }) : place;
   const url = locationURL();
 
   if (navigator.share) {
@@ -108,9 +113,10 @@ async function shareCurrent() {
   }
   try {
     await navigator.clipboard.writeText(`${text} ${url}`);
-    showToast("Link copied", "Paste it anywhere to share this city's air quality.", "success");
+    showToast(t("share.copied"), "", "success");
+    buzz();
   } catch (e) {
-    showToast("Couldn't copy the link", url, "warn");
+    showToast(t("share.failed"), url, "warn");
   }
 }
 

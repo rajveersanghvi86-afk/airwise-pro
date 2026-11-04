@@ -19,13 +19,28 @@ function mapUnavailable(msg) {
   if (el) el.innerHTML = `<div class="map-fallback"><i class="fa-solid fa-map"></i><span>${msg}</span></div>`;
 }
 
+// Leaflet (~150 KB) is only downloaded when the map card comes into view
+function initMapLazy() {
+  const card = document.getElementById("mapCard");
+  whenVisible(card, () => {
+    loadCSS("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+    loadScript("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js")
+      .then(() => {
+        initMap();
+        if (state.aqiData) updateMap();
+      })
+      .catch(() => mapUnavailable(t("map.unavailable")));
+  });
+}
+
 function initMap() {
   const el = document.getElementById("map");
-  if (!el) return;
+  if (!el || state.map) return;
   if (typeof L === "undefined") {
-    mapUnavailable("The map couldn't load. Check your connection and refresh the page.");
+    mapUnavailable(t("map.unavailable"));
     return;
   }
+  el.innerHTML = "";
 
   state.map = L.map("map", {
     center: [state.currentLat, state.currentLon],
@@ -41,8 +56,8 @@ function initMap() {
   state.mainLayer = L.layerGroup().addTo(state.map);
 
   state.layerControl = L.control.layers(null, {
-    "AQI grid": state.gridLayer,
-    "Favorites": state.favLayer
+    [t("map.grid")]: state.gridLayer,
+    [t("map.favorites")]: state.favLayer
   }, { position: "topright", collapsed: true }).addTo(state.map);
 
   addLegendControl();
@@ -97,14 +112,16 @@ function addLegendControl() {
   const legend = L.control({ position: "bottomleft" });
   legend.onAdd = () => {
     const div = L.DomUtil.create("div", "map-legend");
-    div.innerHTML = `<strong>US AQI</strong>` + AQI_THRESHOLDS.map((t, i) => {
+    div.setAttribute("aria-hidden", "true");
+    div.innerHTML = `<strong>${t("aqi.label")}</strong>` + AQI_THRESHOLDS.map((th, i) => {
       const lo = i === 0 ? 0 : AQI_THRESHOLDS[i - 1].max + 1;
-      return `<span><i style="background:${t.color}"></i>${lo}–${t.max}</span>`;
+      return `<span title="${escapeHTML(t("cat." + th.key))}"><i style="background:${th.color}"></i>${lo}–${th.max}</span>`;
     }).join("");
     L.DomEvent.disableClickPropagation(div);
     return div;
   };
   legend.addTo(state.map);
+  state.legendControl = legend;
 }
 
 function addButtonsControl() {
@@ -112,8 +129,8 @@ function addButtonsControl() {
   ctrl.onAdd = () => {
     const div = L.DomUtil.create("div", "leaflet-bar map-buttons");
     div.innerHTML = `
-      <a href="#" role="button" data-map="recenter" title="Back to ${escapeHTML(state.currentCityName)}" aria-label="Recenter map"><i class="fa-solid fa-crosshairs"></i></a>
-      <a href="#" role="button" data-map="fullscreen" title="Fullscreen" aria-label="Toggle fullscreen map"><i class="fa-solid fa-expand"></i></a>`;
+      <a href="#" role="button" data-map="recenter" title="${escapeHTML(t("map.recenter", { city: state.currentCityName }))}" aria-label="${escapeHTML(t("map.recenter", { city: state.currentCityName }))}"><i class="fa-solid fa-crosshairs" aria-hidden="true"></i></a>
+      <a href="#" role="button" data-map="fullscreen" title="${escapeHTML(t("map.fullscreen"))}" aria-label="${escapeHTML(t("map.fullscreen"))}" aria-pressed="false"><i class="fa-solid fa-expand" aria-hidden="true"></i></a>`;
     L.DomEvent.disableClickPropagation(div);
     div.addEventListener("click", (e) => {
       const a = e.target.closest("[data-map]");
@@ -125,6 +142,7 @@ function addButtonsControl() {
     return div;
   };
   ctrl.addTo(state.map);
+  state.buttonsControl = ctrl;
 }
 
 function toggleMapFullscreen(force) {
@@ -134,6 +152,7 @@ function toggleMapFullscreen(force) {
   document.body.classList.toggle("map-open", on);
   const icon = card.querySelector('[data-map="fullscreen"] i');
   if (icon) icon.className = `fa-solid ${on ? "fa-compress" : "fa-expand"}`;
+  card.querySelector('[data-map="fullscreen"]')?.setAttribute("aria-pressed", on ? "true" : "false");
   if (on) state.map.scrollWheelZoom.enable();
   setTimeout(() => state.map.invalidateSize(), 50);
 }
@@ -141,7 +160,7 @@ function toggleMapFullscreen(force) {
 function addScrollHint(el) {
   const hint = document.createElement("div");
   hint.className = "map-scroll-hint";
-  hint.textContent = "Click the map to zoom with the scroll wheel";
+  hint.textContent = t("map.scrollHint");
   el.appendChild(hint);
   let timer;
   el.addEventListener("wheel", () => {
@@ -179,12 +198,12 @@ function popupHTML({ name, sub, aqi, extra = "", lat, lon, country = "", openabl
       <div class="map-popup-title">${escapeHTML(name)}</div>
       ${sub ? `<div class="map-popup-sub">${escapeHTML(sub)}</div>` : ""}
       <div class="map-popup-aqi">
-        <span class="map-popup-num" style="color:${lvl.color}">${lvl.value}</span>
-        <span class="map-popup-cat" style="background:${lvl.color}22;color:${lvl.color}">${lvl.category}</span>
+        <span class="map-popup-num" style="color:${lvl.text}">${lvl.value}</span>
+        <span class="map-popup-cat" style="background:${lvl.color}22;color:${lvl.text}">${lvl.category}</span>
       </div>
       ${extra}
       ${openable ? `<button class="map-popup-btn" data-open-spot data-lat="${lat}" data-lon="${lon}" data-name="${escapeHTML(name)}" data-country="${escapeHTML(country)}">
-        <i class="fa-solid fa-arrow-up-right-from-square"></i> Full details & forecast
+        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> ${escapeHTML(t("map.details"))}
       </button>` : ""}
     </div>`;
 }
@@ -203,9 +222,9 @@ function renderMainMarker() {
   const dominant = state.stationMeta?.dominantPol ? pollutantLabel(state.stationMeta.dominantPol) : null;
   marker.bindPopup(popupHTML({
     name: state.stationMeta?.isStation ? state.stationMeta.name : state.currentCityName,
-    sub: state.stationMeta?.isStation ? "Monitoring station (WAQI)" : "Showing on the dashboard",
+    sub: state.stationMeta?.isStation ? t("map.station") : t("map.onDashboard"),
     aqi,
-    extra: dominant ? `<div class="map-popup-row">Main pollutant: <strong>${escapeHTML(dominant)}</strong></div>` : "",
+    extra: dominant ? `<div class="map-popup-row">${escapeHTML(t("map.mainPol", { pol: dominant }))}</div>` : "",
     openable: false
   }));
   state.mainLayer.addLayer(marker);
@@ -220,7 +239,7 @@ function renderMapFavorites() {
     const aqi = state.favoriteAQI[f.id];
     if (!isValidNumber(aqi)) return;
     L.marker([f.lat, f.lon], { icon: aqiIcon(aqi, "fav"), zIndexOffset: 500, title: f.city })
-      .bindPopup(popupHTML({ name: f.city, sub: "Favorite", aqi, lat: f.lat, lon: f.lon, country: f.country }))
+      .bindPopup(popupHTML({ name: f.city, sub: t("map.favorite"), aqi, lat: f.lat, lon: f.lon, country: f.country }))
       .addTo(state.favLayer);
   });
 }
@@ -232,7 +251,7 @@ async function showSpotPopup(latlng) {
   const lon = Math.round(L.Util.wrapNum(latlng.lng, [-180, 180], true) * 1e4) / 1e4;
   const popup = L.popup({ maxWidth: 260 })
     .setLatLng(latlng)
-    .setContent(`<div class="map-popup"><div class="map-popup-sub"><i class="fa-solid fa-spinner fa-spin"></i> Checking the air here...</div></div>`)
+    .setContent(`<div class="map-popup"><div class="map-popup-sub"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> ${escapeHTML(t("map.checking"))}</div></div>`)
     .openOn(state.map);
 
   try {
@@ -246,11 +265,11 @@ async function showSpotPopup(latlng) {
 
     const subs = { "PM2.5": cur.us_aqi_pm2_5, "PM10": cur.us_aqi_pm10, "NO₂": cur.us_aqi_nitrogen_dioxide, "O₃": cur.us_aqi_ozone };
     const main = Object.entries(subs).filter(([, v]) => isValidNumber(v)).sort((a, b) => b[1] - a[1])[0];
-    const name = place.city && place.city !== "Current Location" ? place.city : `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+    const name = place.city && place.city !== t("loc.current") ? place.city : `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
 
     popup.setContent(popupHTML({
       name,
-      sub: place.country || "Model estimate",
+      sub: place.country || t("source.model"),
       aqi: cur.us_aqi,
       extra: `
         ${isValidNumber(cur.pm2_5) ? `<div class="map-popup-row">PM2.5: <strong>${cur.pm2_5.toFixed(1)} µg/m³</strong></div>` : ""}
@@ -301,9 +320,19 @@ async function refreshGrid() {
 }
 
 async function loadGrid() {
+  if (state.lite && !state.gridRequested) {
+    state.gridLayer.clearLayers();
+    setMapStatus(`${escapeHTML(t("map.liteNote"))} <button class="btn-icon-text btn-small" id="loadAreaBtn">${escapeHTML(t("map.loadArea"))}</button>`);
+    document.getElementById("loadAreaBtn")?.addEventListener("click", () => {
+      state.gridRequested = true;
+      buzz();
+      refreshGrid();
+    });
+    return;
+  }
   if (state.map.getZoom() < GRID_MIN_ZOOM) {
     state.gridLayer.clearLayers();
-    setMapStatus("Zoom in to see AQI readings across the area.");
+    setMapStatus(escapeHTML(t("map.zoomIn")));
     return;
   }
 
@@ -325,7 +354,7 @@ async function loadGrid() {
         state.gridCache.set(key(p), { aqi: isValidNumber(aqi) ? aqi : null, t: now });
       });
     } catch (e) {
-      setMapStatus("Couldn't load area readings. Tap the map to check a single spot.");
+      setMapStatus(escapeHTML(t("map.failed")));
       return;
     }
   }
@@ -345,7 +374,7 @@ async function loadGrid() {
       .on("click", (e) => { L.DomEvent.stopPropagation(e); showSpotPopup(e.latlng); })
       .addTo(state.gridLayer);
   });
-  setMapStatus(shown ? "Tap any spot on the map to check its air." : "No readings for this area.");
+  setMapStatus(escapeHTML(shown ? t("map.tap") : t("map.none")));
 }
 
 async function refreshStations() {
@@ -358,7 +387,7 @@ async function refreshStations() {
     return;
   }
   if (!state.stationsInControl) {
-    state.layerControl.addOverlay(state.stationLayer, "Monitoring stations");
+    state.layerControl.addOverlay(state.stationLayer, t("map.stations"));
     state.stationsInControl = true;
   }
   if (!state.map.hasLayer(state.stationLayer)) return;
@@ -371,9 +400,9 @@ async function refreshStations() {
     json.data.slice(0, 150).forEach(s => {
       const aqi = parseInt(s.aqi, 10);
       if (!isValidNumber(aqi)) return;
-      const name = s.station?.name || "Monitoring station";
+      const name = s.station?.name || t("map.stations");
       L.marker([s.lat, s.lon], { icon: aqiIcon(aqi, "station"), zIndexOffset: 200, title: name })
-        .bindPopup(popupHTML({ name, sub: "Monitoring station (WAQI)", aqi, lat: s.lat, lon: s.lon }))
+        .bindPopup(popupHTML({ name, sub: t("map.station"), aqi, lat: s.lat, lon: s.lon }))
         .addTo(state.stationLayer);
     });
   } catch (e) {
@@ -402,7 +431,10 @@ function updateMap() {
     state.mapCenteredOn = id;
     state.refreshOverlaysSoon();
     const recenter = document.querySelector('[data-map="recenter"]');
-    if (recenter) recenter.title = `Back to ${state.currentCityName}`;
+    if (recenter) {
+      recenter.title = t("map.recenter", { city: state.currentCityName });
+      recenter.setAttribute("aria-label", recenter.title);
+    }
   } else {
     // Refresh: drop cached grid values so they update
     state.gridCache.clear();
@@ -410,4 +442,22 @@ function updateMap() {
   }
   renderMainMarker();
   renderMapFavorites();
+}
+
+// Language changed: swap the translated controls in place and redraw popups
+function refreshMapLanguage() {
+  if (!state.map) return;
+  [state.layerControl, state.legendControl, state.buttonsControl].forEach(c => c && state.map.removeControl(c));
+  state.layerControl = L.control.layers(null, {
+    [t("map.grid")]: state.gridLayer,
+    [t("map.favorites")]: state.favLayer
+  }, { position: "topright", collapsed: true }).addTo(state.map);
+  if (state.stationsInControl) state.layerControl.addOverlay(state.stationLayer, t("map.stations"));
+  addLegendControl();
+  addButtonsControl();
+  const hint = document.querySelector(".map-scroll-hint");
+  if (hint) hint.textContent = t("map.scrollHint");
+  renderMainMarker();
+  renderMapFavorites();
+  refreshMapOverlays();
 }

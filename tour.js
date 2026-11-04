@@ -2,16 +2,18 @@
    AirWise Pro - Welcome screen & guided tour
    ========================================================================== */
 
+// `tab` = which phone tab holds the element
 const TOUR_STEPS = [
-  { target: ".search-box", title: "Find any city", text: "Search for a city, or tap the location button to use where you are now." },
-  { target: ".aqi-hero-card", title: "Today's air at a glance", text: "The dial shows the US AQI. Green is good, red and purple mean stay careful. You'll also see the main pollutant and the weather." },
-  { target: "#favBtn", title: "Save your places", text: "Tap the star to save a city. Saved places appear in the Favorites bar with their live AQI." },
-  { target: ".profile-bar", title: "Pick who the advice is for", text: "Choose a health profile and every recommendation adapts. Take the quiz to build your own." },
-  { target: "#personalPlanCard", title: "Your personal plan", text: "After the quiz, this card shows your own risk level and tips, including an asthma check." },
-  { target: ".outdoor-planner-hero", title: "Plan the best time to go out", text: "The cleanest hour in the next 24 hours is marked with a star." },
-  { target: "#alertsBtn", title: "Get alerts", text: "Turn on notifications to hear when the air gets unhealthy, or when it's about to." },
-  { target: "#themeBtn", title: "Light or dark", text: "Switch the look anytime. By default AirWise follows your device." },
-  { target: "#helpBtn", title: "That's it!", text: "You can replay this tour from here anytime." }
+  { target: ".search-box", key: "search", tab: "now" },
+  { target: ".aqi-hero-card", key: "hero", tab: "now" },
+  { target: "#favBtn", key: "fav", tab: "now" },
+  { target: ".profile-bar", key: "profile", tab: "now" },
+  { target: "#personalPlanCard", key: "plan", tab: "now" },
+  { target: ".outdoor-planner-hero", key: "planner", tab: "plan" },
+  { target: ".bottom-nav", key: "nav" },
+  { target: "#alertsBtn", key: "alerts" },
+  { target: "#themeBtn", key: "theme" },
+  { target: "#helpBtn", key: "help" }
 ];
 
 state.tourIndex = -1;
@@ -39,6 +41,8 @@ function endTour() {
 }
 
 function visibleTarget(step) {
+  // On phones, switch to the tab that holds this element first
+  if (step.tab && document.body.dataset.layout === "phone" && state.tab !== step.tab) setTab(step.tab, { push: false });
   const el = document.querySelector(step.target);
   if (!el) return null;
   const r = el.getBoundingClientRect();
@@ -52,19 +56,21 @@ function showTourStep() {
 
   const step = TOUR_STEPS[state.tourIndex];
   const el = visibleTarget(step);
+  const title = t(`tour.${step.key}.t`);
+  const text = t(`tour.${step.key}.d`);
   const { pop } = tourEls();
   const isLast = state.tourIndex === TOUR_STEPS.length - 1;
 
   pop.innerHTML = `
     <div class="tour-count">${state.tourIndex + 1} / ${TOUR_STEPS.length}</div>
-    <h4 id="tourTitle">${step.title}</h4>
-    <p>${step.text}</p>
+    <h4 id="tourTitle">${title}</h4>
+    <p>${text}</p>
     <div class="tour-nav">
-      <button class="tour-skip" data-tour="skip">${isLast ? "" : "Skip tour"}</button>
+      <button class="tour-skip" data-tour="skip">${isLast ? "" : t("tour.skip")}</button>
       <div class="tour-nav-right">
-        ${state.tourIndex > 0 ? `<button class="btn-icon-text btn-small" data-tour="back">Back</button>` : ""}
-        ${isLast && !state.quiz ? `<button class="btn-icon-text btn-small" data-tour="quiz">Take the quiz</button>` : ""}
-        <button class="btn-icon-text btn-primary btn-small" data-tour="next">${isLast ? "Done" : "Next"}</button>
+        ${state.tourIndex > 0 ? `<button class="btn-icon-text btn-small" data-tour="back">${t("tour.back")}</button>` : ""}
+        ${isLast && !state.quiz ? `<button class="btn-icon-text btn-small" data-tour="quiz">${t("tour.quiz")}</button>` : ""}
+        <button class="btn-icon-text btn-primary btn-small" data-tour="next">${isLast ? t("tour.done") : t("tour.next")}</button>
       </div>
     </div>`;
 

@@ -304,7 +304,8 @@ function renderQuizResult() {
 function saveQuiz(result) {
   // Drop answers to questions that no longer apply (e.g. asthma unticked)
   const allowed = new Set(visibleQuestions(state.quizDraft).map(q => q.id));
-  const answers = Object.fromEntries(Object.entries(state.quizDraft).filter(([k]) => allowed.has(k)));
+  const answers = {};
+  Object.keys(state.quizDraft).forEach(k => { if (allowed.has(k)) answers[k] = state.quizDraft[k]; });
   state.quiz = { answers, result, completedAt: Date.now() };
   storage.set("airwise_quiz", JSON.stringify(state.quiz));
 
@@ -425,7 +426,7 @@ function renderPersonalPlan() {
 
   body.innerHTML = `
     <div class="plan-layout">
-      <div class="plan-risk" style="--risk-color: ${feel.color};">
+      <div class="plan-risk" style="--risk-color: ${feel.color}; --risk-text: ${feel.text};">
         <span class="plan-risk-label">Your risk right now</span>
         <span class="plan-risk-value">${risk}</span>
         <span class="plan-risk-sub">AQI ${Math.round(aqi)} affects you like <strong>${feel.value}</strong> would affect most people</span>
